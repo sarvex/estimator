@@ -44,7 +44,7 @@ def get_linear_model_bias(name='linear_model'):
 
 def get_linear_model_column_var(column, name='linear_model'):
   return tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.GLOBAL_VARIABLES,
-                            name + '/' + column.name)[0]
+                                     f'{name}/{column.name}')[0]
 
 
 class BaseFeatureColumnForTests(tf.compat.v2.__internal__.feature_column.FeatureColumn):
@@ -224,8 +224,10 @@ class CrossedColumnTest(tf.test.TestCase):
 
   def test_linear_model_with_weights(self):
 
-    class _TestColumnWithWeights(BaseFeatureColumnForTests,
-                                 fc.CategoricalColumn):
+
+
+
+    class _TestColumnWithWeights(BaseFeatureColumnForTests, fc.CategoricalColumn):
       """Produces sparse IDs and sparse weights."""
 
       @property
@@ -239,10 +241,8 @@ class CrossedColumnTest(tf.test.TestCase):
       @property
       def parse_example_spec(self):
         return {
-            self.name:
-                tf.io.VarLenFeature(tf.int32),
-            '{}_weights'.format(self.name):
-                tf.io.VarLenFeature(tf.float32),
+            self.name: tf.io.VarLenFeature(tf.int32),
+            f'{self.name}_weights': tf.io.VarLenFeature(tf.float32),
         }
 
       @property
@@ -250,9 +250,10 @@ class CrossedColumnTest(tf.test.TestCase):
         return 5
 
       def transform_feature(self, transformation_cache, state_manager):
-        return (transformation_cache.get(self.name, state_manager),
-                transformation_cache.get('{}_weights'.format(self.name),
-                                         state_manager))
+        return transformation_cache.get(self.name,
+                                        state_manager), transformation_cache.get(
+                                            f'{self.name}_weights',
+                                            state_manager)
 
       def get_sparse_tensors(self, transformation_cache, state_manager):
         """Populates both id_tensor and weight_tensor."""
@@ -260,29 +261,31 @@ class CrossedColumnTest(tf.test.TestCase):
         return fc.CategoricalColumn.IdWeightPair(
             id_tensor=ids_and_weights[0], weight_tensor=ids_and_weights[1])
 
+
     t = _TestColumnWithWeights()
     crossed = tf.feature_column.crossed_column([t, 'c'], hash_bucket_size=5, hash_key=5)
     with tf.Graph().as_default():
-      with self.assertRaisesRegexp(
-          ValueError,
-          'crossed_column does not support weight_tensor.*{}'.format(t.name)):
+      with self.assertRaisesRegexp(ValueError, f'crossed_column does not support weight_tensor.*{t.name}'):
         model = linear.LinearModel((crossed,))
         model({
             t.name:
-                tf.sparse.SparseTensor(
-                    indices=((0, 0), (1, 0), (1, 1)),
-                    values=[0, 1, 2],
-                    dense_shape=(2, 2)),
-            '{}_weights'.format(t.name):
-                tf.sparse.SparseTensor(
-                    indices=((0, 0), (1, 0), (1, 1)),
-                    values=[1., 10., 2.],
-                    dense_shape=(2, 2)),
+            tf.sparse.SparseTensor(
+                indices=((0, 0), (1, 0), (1, 1)),
+                values=[0, 1, 2],
+                dense_shape=(2, 2),
+            ),
+            f'{t.name}_weights':
+            tf.sparse.SparseTensor(
+                indices=((0, 0), (1, 0), (1, 1)),
+                values=[1.0, 10.0, 2.0],
+                dense_shape=(2, 2),
+            ),
             'c':
-                tf.sparse.SparseTensor(
-                    indices=((0, 0), (1, 0), (1, 1)),
-                    values=['cA', 'cB', 'cC'],
-                    dense_shape=(2, 2)),
+            tf.sparse.SparseTensor(
+                indices=((0, 0), (1, 0), (1, 1)),
+                values=['cA', 'cB', 'cC'],
+                dense_shape=(2, 2),
+            ),
         })
 
 

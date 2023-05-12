@@ -63,7 +63,7 @@ def wrap_and_check_input_tensors(tensors, field_name, allow_int_keys=False):
       or non-Tensor values
   """
   if tensors is None:
-    raise ValueError('{}s must be defined.'.format(field_name))
+    raise ValueError(f'{field_name}s must be defined.')
   if not isinstance(tensors, dict):
     tensors = {_SINGLE_TENSOR_DEFAULT_NAMES[field_name]: tensors}
   for name, tensor in tensors.items():
@@ -74,35 +74,26 @@ def wrap_and_check_input_tensors(tensors, field_name, allow_int_keys=False):
 
 def _check_tensor(tensor, name, error_label='feature'):
   """Check that passed `tensor` is a Tensor or SparseTensor or RaggedTensor."""
-  if not (isinstance(tensor, tf.Tensor) or
-          isinstance(tensor, tf.sparse.SparseTensor) or
-          isinstance(tensor, tf.RaggedTensor)):
-    fmt_name = ' {}'.format(name) if name else ''
-    value_error = ValueError('{}{} must be a Tensor, SparseTensor, or '
-                             'RaggedTensor.'.format(error_label, fmt_name))
-    # NOTE(ericmc): This if-else block is a specific carve-out for
-    # LabeledTensor, which has a `.tensor` attribute and which is
-    # convertible to tf.Tensor via ops.convert_to_tensor.
-    # Allowing all types convertible to tf.Tensor is considered by soergel@
-    # to be too permissive.
-    # TODO(soergel): accept any type convertible to Tensor,
-    # as in cl/193238295 snapshot #6.
-    if hasattr(tensor, 'tensor'):
-      try:
-        ops.convert_to_tensor(tensor)
-      except TypeError:
-        raise value_error
-    else:
+  if not (isinstance(tensor,
+                     (tf.Tensor, tf.sparse.SparseTensor, tf.RaggedTensor))):
+    fmt_name = f' {name}' if name else ''
+    value_error = ValueError(
+        f'{error_label}{fmt_name} must be a Tensor, SparseTensor, or RaggedTensor.'
+    )
+    if not hasattr(tensor, 'tensor'):
+      raise value_error
+    try:
+      ops.convert_to_tensor(tensor)
+    except TypeError:
       raise value_error
 
 
 def _check_tensor_key(name, error_label='feature', allow_ints=False):
   if not isinstance(name, six.string_types):
     if not allow_ints:
-      raise ValueError('{} keys must be strings: {}.'.format(error_label, name))
+      raise ValueError(f'{error_label} keys must be strings: {name}.')
     elif not isinstance(name, six.integer_types):
-      raise ValueError('{} keys must be strings or ints: {}.'.format(
-          error_label, name))
+      raise ValueError(f'{error_label} keys must be strings or ints: {name}.')
 
 
 @estimator_export('estimator.export.ServingInputReceiver')
@@ -146,8 +137,8 @@ class ServingInputReceiver(
     if receiver_tensors_alternatives is not None:
       if not isinstance(receiver_tensors_alternatives, dict):
         raise ValueError(
-            'receiver_tensors_alternatives must be a dict: {}.'.format(
-                receiver_tensors_alternatives))
+            f'receiver_tensors_alternatives must be a dict: {receiver_tensors_alternatives}.'
+        )
       for alternative_name, receiver_tensors_alt in (
           six.iteritems(receiver_tensors_alternatives)):
         # Updating dict during iteration is OK in this case.

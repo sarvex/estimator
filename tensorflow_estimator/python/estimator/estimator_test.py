@@ -320,8 +320,7 @@ class EstimatorConstructorTest(tf.test.TestCase):
 
     est = estimator.EstimatorV2(model_fn=model_fn)
     model_fn_args = function_utils.fn_args(est.model_fn)
-    self.assertEqual(
-        set(['features', 'labels', 'mode', 'config']), set(model_fn_args))
+    self.assertEqual({'features', 'labels', 'mode', 'config'}, set(model_fn_args))
 
   def test_model_fn_property_returns_fixed_signature(self):
 
@@ -330,8 +329,7 @@ class EstimatorConstructorTest(tf.test.TestCase):
 
     est = estimator.EstimatorV2(model_fn=model_fn)
     model_fn_args = function_utils.fn_args(est.model_fn)
-    self.assertEqual(
-        set(['features', 'labels', 'mode', 'config']), set(model_fn_args))
+    self.assertEqual({'features', 'labels', 'mode', 'config'}, set(model_fn_args))
 
 
 def dummy_input_fn():
@@ -347,9 +345,9 @@ def model_fn_global_step_incrementer(features, labels, mode):
 
 def assert_features_op(expected_features, actual_features):
   return [
-      tf.debugging.assert_equal(
-          expected_features[k], actual_features[k], name='assert_%s' % k)
-      for k in expected_features
+      tf.debugging.assert_equal(expected_features[k],
+                                actual_features[k],
+                                name=f'assert_{k}') for k in expected_features
   ]
 
 
@@ -622,7 +620,7 @@ class EstimatorTrainTest(tf.test.TestCase):
 
     if check_eventfile_for_keyword('loss', est.model_dir):
       return
-    self.fail('{} should be part of reported summaries.'.format('loss'))
+    self.fail('loss should be part of reported summaries.')
 
   def test_latest_checkpoint(self):
     est = estimator.EstimatorV2(model_fn=model_fn_global_step_incrementer)
@@ -1223,8 +1221,8 @@ class EstimatorGetVariablesTest(tf.test.TestCase):
 
     est = estimator.EstimatorV2(model_fn=_model_fn)
     est.train(input_fn=dummy_input_fn, steps=1)
-    self.assertEqual(
-        set(['one', 'three', 'global_step']), set(est.get_variable_names()))
+    self.assertEqual({'one', 'three', 'global_step'},
+                     set(est.get_variable_names()))
     self.assertEqual(1., est.get_variable_value('one'))
     self.assertEqual(3., est.get_variable_value('three'))
 
@@ -1251,8 +1249,7 @@ class EstimatorTraceTest(tf.test.TestCase, parameterized.TestCase):
     profile_dir = os.path.join(self._profiler_dir, 'plugins', 'profile')
     run = gfile.ListDirectory(profile_dir)[0]
     hostname = socket.gethostname()
-    overview_page = os.path.join(profile_dir, run,
-                                 hostname + '.overview_page.pb')
+    overview_page = os.path.join(profile_dir, run, f'{hostname}.overview_page.pb')
     with open(overview_page, 'r', encoding='latin-1') as f:
       overview_page_content = f.read()
       # Asserts step time is profiled
@@ -2319,16 +2316,16 @@ def _model_fn_with_x_y(features, labels, mode):
   else:
     prefix = 'eval_' if mode == ModeKeys.EVAL else ''
 
-    multiplied = tf.math.multiply(
-        features['x'], features['y'], name='{}multiplied'.format(prefix))
-    mean = tf.keras.metrics.Mean(name='{}mean'.format(prefix))
+    multiplied = tf.math.multiply(features['x'],
+                                  features['y'],
+                                  name=f'{prefix}multiplied')
+    mean = tf.keras.metrics.Mean(name=f'{prefix}mean')
     mean.update_state(features['x'] - features['y'])
     eval_metrics = {
         'mean1':
-            mean,
+        mean,
         'mean2':
-            tf.metrics.mean(
-                features['x'] - features['y'], name='{}mean'.format(prefix))
+        tf.metrics.mean(features['x'] - features['y'], name=f'{prefix}mean'),
     }
     tf.Variable(1., name='later_var')
     tf.Variable(3., name='name_collision')
@@ -3471,7 +3468,7 @@ class EstimatorHookOrderingTest(tf.test.TestCase):
           train_op=inc_global_step)
 
     def empty_input_fn():
-      return dict(), None
+      return {}, None
 
     class AfterRunCountingHook(tf.train.SessionRunHook):
       """Hooks that counts the number of times after_run() is called."""

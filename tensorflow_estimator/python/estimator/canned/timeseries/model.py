@@ -294,8 +294,8 @@ class TimeSeriesModel(object):
           # feature shapes, so we save on a bit of logic and provide a better
           # error message by checking that here.
           raise ValueError(
-              ("Features with unknown rank are not supported. Got shape {} for "
-               "feature {}.").format(tensor.get_shape(), name))
+              f"Features with unknown rank are not supported. Got shape {tensor.get_shape()} for feature {name}."
+          )
         tensor_shape_dynamic = tf.compat.v1.shape(tensor)
         tensor = tf.reshape(
             tensor,

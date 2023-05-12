@@ -104,7 +104,9 @@ def sigmoid(x):
 
 
 def mock_optimizer(testcase, expected_loss=None):
-  expected_var_names = ['%s:0' % AGE_WEIGHT_NAME, '%s:0' % BIAS_NAME]
+  expected_var_names = [f'{AGE_WEIGHT_NAME}:0', f'{BIAS_NAME}:0']
+
+
 
   class _Optimizer(tf.keras.optimizers.Optimizer):
 
@@ -129,12 +131,10 @@ def mock_optimizer(testcase, expected_loss=None):
         return [tf.no_op()]
 
     def get_config(self):
-      config = super(_Optimizer, self).get_config()
-      return config
+      return super(_Optimizer, self).get_config()
 
-  optimizer = _Optimizer(name='my_optimizer')
 
-  return optimizer
+  return _Optimizer(name='my_optimizer')
 
 
 # TODO(b/36813849): Add tests with dynamic shape inputs using placeholders.
@@ -389,7 +389,7 @@ class BaseLinearRegressorPredictTest(object):
         num_epochs=1,
         shuffle=False)
     predictions = linear_regressor.predict(input_fn=predict_input_fn)
-    predicted_scores = list([x['predictions'] for x in predictions])
+    predicted_scores = [x['predictions'] for x in predictions]
     # x * weight + bias = 2. * 10. + .2 = 20.2
     self.assertAllClose([[20.2]], predicted_scores)
 
@@ -421,7 +421,7 @@ class BaseLinearRegressorPredictTest(object):
         num_epochs=1,
         shuffle=False)
     predictions = linear_regressor.predict(input_fn=predict_input_fn)
-    predicted_scores = list([x['predictions'] for x in predictions])
+    predicted_scores = [x['predictions'] for x in predictions]
     # score = x * weight + bias, shape=[batch_size, label_dimension]
     self.assertAllClose([[30.2, 40.4, 50.6], [70.2, 96.4, 122.6]],
                         predicted_scores)
@@ -450,7 +450,7 @@ class BaseLinearRegressorPredictTest(object):
         num_epochs=1,
         shuffle=False)
     predictions = linear_regressor.predict(input_fn=predict_input_fn)
-    predicted_scores = list([x['predictions'] for x in predictions])
+    predicted_scores = [x['predictions'] for x in predictions]
     # x0 * weight0 + x1 * weight1 + bias = 2. * 10. + 3. * 20 + .2 = 80.2
     self.assertAllClose([[80.2]], predicted_scores)
 
@@ -475,7 +475,7 @@ class BaseLinearRegressorPredictTest(object):
       }).batch(1)
 
     predictions = linear_regressor.predict(input_fn=_predict_input_fn)
-    predicted_scores = list([x['predictions'] for x in predictions])
+    predicted_scores = [x['predictions'] for x in predictions]
     # x0 * weight0 + x1 * weight1 + bias = 2. * 10. + 3. * 20 + .2 = 80.2
     self.assertAllClose([[80.2]], predicted_scores)
 
@@ -512,7 +512,7 @@ class BaseLinearRegressorPredictTest(object):
     linear_regressor = self._linear_regressor_fn(
         feature_columns=feature_columns, model_dir=self._model_dir)
     predictions = linear_regressor.predict(input_fn=_input_fn)
-    predicted_scores = list([x['predictions'] for x in predictions])
+    predicted_scores = [x['predictions'] for x in predictions]
     self.assertAllClose([[12.0], [13.0]], predicted_scores)
 
     # With sparse_combiner = 'mean', we have
@@ -525,7 +525,7 @@ class BaseLinearRegressorPredictTest(object):
         model_dir=self._model_dir,
         sparse_combiner='mean')
     predictions = linear_regressor.predict(input_fn=_input_fn)
-    predicted_scores = list([x['predictions'] for x in predictions])
+    predicted_scores = [x['predictions'] for x in predictions]
     self.assertAllClose([[8.5], [9.0]], predicted_scores)
 
     # With sparse_combiner = 'sqrtn', we have
@@ -538,7 +538,7 @@ class BaseLinearRegressorPredictTest(object):
         model_dir=self._model_dir,
         sparse_combiner='sqrtn')
     predictions = linear_regressor.predict(input_fn=_input_fn)
-    predicted_scores = list([x['predictions'] for x in predictions])
+    predicted_scores = [x['predictions'] for x in predictions]
     self.assertAllClose([[9.94974], [10.65685]], predicted_scores)
 
 
@@ -591,7 +591,6 @@ class BaseLinearRegressorIntegrationTest(object):
   def test_numpy_input_fn(self):
     """Tests complete flow with numpy_input_fn."""
     label_dimension = 2
-    input_dimension = label_dimension
     batch_size = 10
     prediction_length = batch_size
     data = np.linspace(0., 2., batch_size * label_dimension, dtype=np.float32)
@@ -616,13 +615,15 @@ class BaseLinearRegressorIntegrationTest(object):
         num_epochs=1,
         shuffle=False)
 
+    input_dimension = label_dimension
     self._test_complete_flow(
         train_input_fn=train_input_fn,
         eval_input_fn=eval_input_fn,
         predict_input_fn=predict_input_fn,
         input_dimension=input_dimension,
-        label_dimension=label_dimension,
-        prediction_length=prediction_length)
+        input_dimension=input_dimension,
+        prediction_length=prediction_length,
+    )
 
   def test_pandas_input_fn(self):
     """Tests complete flow with pandas_input_fn."""
@@ -650,8 +651,9 @@ class BaseLinearRegressorIntegrationTest(object):
         eval_input_fn=eval_input_fn,
         predict_input_fn=predict_input_fn,
         input_dimension=input_dimension,
-        label_dimension=label_dimension,
-        prediction_length=prediction_length)
+        input_dimension=input_dimension,
+        prediction_length=prediction_length,
+    )
 
   def test_input_fn_from_parse_example(self):
     """Tests complete flow with input_fn constructed from parse_example."""
@@ -732,10 +734,7 @@ class BaseLinearRegressorTrainingTest(object):
                          expected_global_step,
                          expected_age_weight=None,
                          expected_bias=None):
-    shapes = {
-        name: shape
-        for (name, shape) in tf.train.list_variables(self._model_dir)
-    }
+    shapes = dict(tf.train.list_variables(self._model_dir))
 
     self.assertEqual([], shapes[tf.compat.v1.GraphKeys.GLOBAL_STEP])
     self.assertEqual(
@@ -936,10 +935,7 @@ class BaseLinearClassifierTrainingTest(object):
                          expected_bias=None):
     logits_dimension = n_classes if n_classes > 2 else 1
 
-    shapes = {
-        name: shape
-        for (name, shape) in tf.train.list_variables(self._model_dir)
-    }
+    shapes = dict(tf.train.list_variables(self._model_dir))
 
     self.assertEqual([], shapes[tf.compat.v1.GraphKeys.GLOBAL_STEP])
     self.assertEqual(
@@ -1660,28 +1656,32 @@ class BaseLinearClassifierPredictTest(object):
     self._testPredictions(
         n_classes,
         label_vocabulary=None,
-        label_output_fn=lambda x: ('%s' % x).encode())
+        label_output_fn=lambda x: f'{x}'.encode(),
+    )
 
   def testBinaryClassesWithLabelVocabulary(self):
     n_classes = 2
     self._testPredictions(
         n_classes,
-        label_vocabulary=['class_vocab_{}'.format(i) for i in range(n_classes)],
-        label_output_fn=lambda x: ('class_vocab_%s' % x).encode())
+        label_vocabulary=[f'class_vocab_{i}' for i in range(n_classes)],
+        label_output_fn=lambda x: f'class_vocab_{x}'.encode(),
+    )
 
   def testMultiClassesWithoutLabelVocabulary(self):
     n_classes = 4
     self._testPredictions(
         n_classes,
         label_vocabulary=None,
-        label_output_fn=lambda x: ('%s' % x).encode())
+        label_output_fn=lambda x: f'{x}'.encode(),
+    )
 
   def testMultiClassesWithLabelVocabulary(self):
     n_classes = 4
     self._testPredictions(
         n_classes,
-        label_vocabulary=['class_vocab_{}'.format(i) for i in range(n_classes)],
-        label_output_fn=lambda x: ('class_vocab_%s' % x).encode())
+        label_vocabulary=[f'class_vocab_{i}' for i in range(n_classes)],
+        label_output_fn=lambda x: f'class_vocab_{x}'.encode(),
+    )
 
   def testSparseCombiner(self):
     w_a = 2.0
@@ -1716,7 +1716,7 @@ class BaseLinearClassifierPredictTest(object):
     linear_classifier = self._linear_classifier_fn(
         feature_columns=feature_columns, model_dir=self._model_dir)
     predictions = linear_classifier.predict(input_fn=_input_fn)
-    predicted_scores = list([x['logits'] for x in predictions])
+    predicted_scores = [x['logits'] for x in predictions]
     self.assertAllClose([[12.0], [13.0]], predicted_scores)
 
     # With sparse_combiner = 'mean', we have
@@ -1729,7 +1729,7 @@ class BaseLinearClassifierPredictTest(object):
         model_dir=self._model_dir,
         sparse_combiner='mean')
     predictions = linear_classifier.predict(input_fn=_input_fn)
-    predicted_scores = list([x['logits'] for x in predictions])
+    predicted_scores = [x['logits'] for x in predictions]
     self.assertAllClose([[8.5], [9.0]], predicted_scores)
 
     # With sparse_combiner = 'sqrtn', we have
@@ -1742,7 +1742,7 @@ class BaseLinearClassifierPredictTest(object):
         model_dir=self._model_dir,
         sparse_combiner='sqrtn')
     predictions = linear_classifier.predict(input_fn=_input_fn)
-    predicted_scores = list([x['logits'] for x in predictions])
+    predicted_scores = [x['logits'] for x in predictions]
     self.assertAllClose([[9.94974], [10.65685]], predicted_scores)
 
 

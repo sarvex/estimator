@@ -66,8 +66,8 @@ class ModelFunction(tf.compat.v2.__internal__.tracking.AutoTrackable):
 
   def add_mode(self, fn, mode, input_signature=None):
     if mode in self._functions:
-      raise ValueError('ModelFunction object has multiple functions with name'
-                       ' {}.'.format(mode))
+      raise ValueError(
+          f'ModelFunction object has multiple functions with name {mode}.')
 
     spec_fn = EstimatorSpecFunction(
         fn,
@@ -91,14 +91,10 @@ class ModelFunction(tf.compat.v2.__internal__.tracking.AutoTrackable):
   def call(self, mode, features, labels=None):
     if mode not in self._functions:
       raise ValueError(
-          'Mode {} is not defined the ModelFunction. To add modes,'
-          ' use the `add_mode()` function. Available modes: {}'.format(
-              mode, self._functions.keys()))
+          f'Mode {mode} is not defined the ModelFunction. To add modes, use the `add_mode()` function. Available modes: {self._functions.keys()}'
+      )
     fn = self._functions[mode]
-    if fn.expects_labels:
-      return fn(features, labels)
-    else:
-      return fn(features)
+    return fn(features, labels) if fn.expects_labels else fn(features)
 
 
 def _wrap_and_verify_model_fn(model_fn,
@@ -317,9 +313,7 @@ class _EstimatorWrappedGraph(wrap_function.WrappedGraph):
       features = input_receiver.features
       labels = getattr(input_receiver, 'labels', None)
 
-      if labels is None:
-        return features
-      return features, labels
+      return features if labels is None else (features, labels)
 
     func_graph.func_graph_from_py_func(
         None,  # Name is unused.
@@ -383,10 +377,7 @@ def _canonicalize_receiver_tensors(receiver_tensors):
 
 
 def _input_receiver_fn_name(name):
-  if name is None:
-    return _RECEIVER_FN_NAME
-  else:
-    return '{}_{}'.format(_RECEIVER_FN_NAME, name)
+  return _RECEIVER_FN_NAME if name is None else f'{_RECEIVER_FN_NAME}_{name}'
 
 
 def _prune_receiver_tensors(wrapped_function, receiver_tensors, outputs, name):

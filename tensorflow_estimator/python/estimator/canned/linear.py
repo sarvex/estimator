@@ -204,8 +204,8 @@ class LinearSDCA(object):
         dense_feature_weights.append(
             state_manager.get_variable(column, 'weights'))
       else:
-        raise ValueError('LinearSDCA does not support column type %s.' %
-                         type(column).__name__)
+        raise ValueError(
+            f'LinearSDCA does not support column type {type(column).__name__}.')
 
     # Add the bias column
     dense_features.append(tf.ones([batch_size, 1]))
@@ -476,7 +476,7 @@ def _sdca_model_fn(features, labels, mode, head, feature_columns, optimizer):
     assert head.logits_dimension == 1
     loss_type = 'squared_loss'
   else:
-    raise ValueError('Unsupported head type: {}'.format(head))
+    raise ValueError(f'Unsupported head type: {head}')
 
   # The default name for LinearModel.
   linear_model_name = 'linear_model'
@@ -512,31 +512,30 @@ def _sdca_model_fn(features, labels, mode, head, feature_columns, optimizer):
   tf.compat.v1.summary.scalar('fraction_of_zero_weights',
                               _compute_fraction_of_zero(variables))
 
-  if mode == ModeKeys.TRAIN:
-    sdca_model, train_op = optimizer.get_train_step(
-        linear_model.layer._state_manager,  # pylint: disable=protected-access
-        head._weight_column,  # pylint: disable=protected-access
-        loss_type,
-        feature_columns,
-        features,
-        labels,
-        linear_model.bias,
-        tf.compat.v1.train.get_global_step())
-
-    update_weights_hook = _SDCAUpdateWeightsHook(sdca_model, train_op)
-
-    model_fn_ops = head.create_estimator_spec(
-        features=features,
-        mode=mode,
-        labels=labels,
-        train_op_fn=lambda unused_loss_fn: train_op,
-        logits=logits)
-    return model_fn_ops._replace(
-        training_chief_hooks=(model_fn_ops.training_chief_hooks +
-                              (update_weights_hook,)))
-  else:
+  if mode != ModeKeys.TRAIN:
     return head.create_estimator_spec(
         features=features, mode=mode, labels=labels, logits=logits)
+  sdca_model, train_op = optimizer.get_train_step(
+      linear_model.layer._state_manager,  # pylint: disable=protected-access
+      head._weight_column,  # pylint: disable=protected-access
+      loss_type,
+      feature_columns,
+      features,
+      labels,
+      linear_model.bias,
+      tf.compat.v1.train.get_global_step())
+
+  update_weights_hook = _SDCAUpdateWeightsHook(sdca_model, train_op)
+
+  model_fn_ops = head.create_estimator_spec(
+      features=features,
+      mode=mode,
+      labels=labels,
+      train_op_fn=lambda unused_loss_fn: train_op,
+      logits=logits)
+  return model_fn_ops._replace(
+      training_chief_hooks=(model_fn_ops.training_chief_hooks +
+                            (update_weights_hook,)))
 
 
 class _SDCAUpdateWeightsHook(tf.compat.v1.train.SessionRunHook):
@@ -649,8 +648,9 @@ def _linear_model_fn_v2(features,
     ValueError: mode or params are invalid, or features has the wrong type.
   """
   if not isinstance(features, dict):
-    raise ValueError('features should be a dictionary of `Tensor`s. '
-                     'Given type: {}'.format(type(features)))
+    raise ValueError(
+        f'features should be a dictionary of `Tensor`s. Given type: {type(features)}'
+    )
 
   del config
 
@@ -716,8 +716,9 @@ def _linear_model_fn(features,
     ValueError: mode or params are invalid, or features has the wrong type.
   """
   if not isinstance(features, dict):
-    raise ValueError('features should be a dictionary of `Tensor`s. '
-                     'Given type: {}'.format(type(features)))
+    raise ValueError(
+        f'features should be a dictionary of `Tensor`s. Given type: {type(features)}'
+    )
 
   num_ps_replicas = config.num_ps_replicas if config else 0
 
@@ -1430,8 +1431,8 @@ class _LinearModelLayer(tf.keras.layers.Layer):
     for column in self._feature_columns:
       if not isinstance(column, (tf.compat.v2.__internal__.feature_column.DenseColumn, fc_v2.CategoricalColumn)):
         raise ValueError(
-            'Items of feature_columns must be either a '
-            'DenseColumn or CategoricalColumn. Given: {}'.format(column))
+            f'Items of feature_columns must be either a DenseColumn or CategoricalColumn. Given: {column}'
+        )
 
     self._units = units
     self._sparse_combiner = sparse_combiner
@@ -1481,8 +1482,7 @@ class _LinearModelLayer(tf.keras.layers.Layer):
 
   def call(self, features):
     if not isinstance(features, dict):
-      raise ValueError('We expected a dictionary here. Instead we got: {}'
-                       .format(features))
+      raise ValueError(f'We expected a dictionary here. Instead we got: {features}')
     with ops.name_scope(self.name):
       transformation_cache = tf.compat.v2.__internal__.feature_column.FeatureTransformationCache(features)
       weighted_sums = []
@@ -1505,9 +1505,7 @@ class _LinearModelLayer(tf.keras.layers.Layer):
           weighted_sums, self._feature_columns)
       predictions_no_bias = tf.math.add_n(
           weighted_sums, name='weighted_sum_no_bias')
-      predictions = tf.nn.bias_add(
-          predictions_no_bias, self.bias, name='weighted_sum')
-      return predictions
+      return tf.nn.bias_add(predictions_no_bias, self.bias, name='weighted_sum')
 
   def get_config(self):
     # Import here to avoid circular imports.

@@ -187,8 +187,8 @@ class TimeSeriesRegressor(estimator_lib.Estimator):
               shape=(filtering_length + prediction_length,),
               dtype=tf.dtypes.string)
         else:  # VarLenFeature
-          raise ValueError("VarLenFeatures not supported, got %s for key %s" %
-                           (feature_spec, key))
+          raise ValueError(
+              f"VarLenFeatures not supported, got {feature_spec} for key {key}")
       tfexamples = tf.compat.v1.placeholder(
           shape=[default_batch_size], dtype=tf.dtypes.string, name="input")
       features = tf.compat.v1.io.parse_example(

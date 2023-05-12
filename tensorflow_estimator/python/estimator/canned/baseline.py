@@ -72,9 +72,10 @@ def _get_weight_column_key(weight_column):
     return None
   if isinstance(weight_column, six.string_types):
     return weight_column
-  if not isinstance(weight_column, feature_column_v1._NumericColumn):  # pylint: disable=protected-access
-    raise TypeError('Weight column must be either a string or _NumericColumn.'
-                    ' Given type: {}.'.format(type(weight_column)))
+  if not isinstance(weight_column, feature_column_v1._NumericColumn):# pylint: disable=protected-access
+    raise TypeError(
+        f'Weight column must be either a string or _NumericColumn. Given type: {type(weight_column)}.'
+    )
   return weight_column.key()
 
 
@@ -84,8 +85,9 @@ def _get_weight_column_key_v2(weight_column):
   if isinstance(weight_column, six.string_types):
     return weight_column
   if not isinstance(weight_column, feature_column_v2.NumericColumn):
-    raise TypeError('Weight column must be either a string or NumericColumn. '
-                    'Given type: {}.'.format(type(weight_column)))
+    raise TypeError(
+        f'Weight column must be either a string or NumericColumn. Given type: {type(weight_column)}.'
+    )
   return weight_column.key()
 
 

@@ -62,8 +62,7 @@ def simple_functional_model(activation='relu'):
   b = tf.keras.layers.Dense(16, activation=activation)(a)
   b = tf.keras.layers.Dropout(0.1)(b)
   b = tf.keras.layers.Dense(_NUM_CLASS, activation='softmax')(b)
-  model = tf.keras.models.Model(inputs=[a], outputs=[b])
-  return model
+  return tf.keras.models.Model(inputs=[a], outputs=[b])
 
 
 def simple_subclassed_model():
@@ -199,10 +198,7 @@ def get_resource_for_simple_model(
 
 def randomize_io_type(array, name):
   switch = np.random.random()
-  if switch > 0.5:
-    return array
-  else:
-    return {name: array}
+  return array if switch > 0.5 else {name: array}
 
 
 def multi_inputs_multi_outputs_model():
@@ -360,8 +356,8 @@ class TestKerasEstimator(tf.test.TestCase, parameterized.TestCase):
     label = np.int64([0, 1, 0, 0, 0])
     train_input_fn = numpy_io.numpy_input_fn(
         x=feature_dict, y=label, num_epochs=1, shuffle=False)
-    feature_columns = list()
-    input_features = dict()
+    feature_columns = []
+    input_features = {}
     for feature_name, data_array in feature_dict.items():
       feature_columns.append(
           tf.feature_column.indicator_column(
@@ -393,8 +389,8 @@ class TestKerasEstimator(tf.test.TestCase, parameterized.TestCase):
     label = np.int64([0, 1, 0, 0, 0])
     train_input_fn = numpy_io.numpy_input_fn(
         x=feature_dict, y=label, num_epochs=1, shuffle=False)
-    feature_columns = list()
-    input_features = dict()
+    feature_columns = []
+    input_features = {}
     for feature_name, data_array in feature_dict.items():
       feature_columns.append(
           tf.feature_column.embedding_column(
@@ -434,8 +430,8 @@ class TestKerasEstimator(tf.test.TestCase, parameterized.TestCase):
     label = np.int64([0, 1, 0, 0, 0])
     train_input_fn = numpy_io.numpy_input_fn(
         x=feature_dict, y=label, num_epochs=1, shuffle=False)
-    feature_columns = list()
-    input_features = dict()
+    feature_columns = []
+    input_features = {}
     for feature_name, data_array in feature_dict.items():
       feature_columns.append(
           tf.feature_column.embedding_column(
@@ -491,10 +487,7 @@ class TestKerasEstimator(tf.test.TestCase, parameterized.TestCase):
 
     # Check loss and all metrics match between keras and estimator.
     def shift(val):
-      if val == 0:
-        return 0
-      else:
-        return val / 10**int(math.log10(abs(val)))
+      return 0 if val == 0 else val / 10**int(math.log10(abs(val)))
 
     for i, metric_name in enumerate(metrics):
       if i == 0:
@@ -503,8 +496,9 @@ class TestKerasEstimator(tf.test.TestCase, parameterized.TestCase):
           shift(keras_eval[i]),
           shift(est_eval[metric_name]),
           places=4,
-          msg='%s mismatch, keras model: %s, estimator: %s' %
-          (metric_name, keras_eval[i], est_eval[metric_name]))
+          msg=
+          f'{metric_name} mismatch, keras model: {keras_eval[i]}, estimator: {est_eval[metric_name]}',
+      )
 
   def test_evaluate_multi_io_model(self):
     input_a = tf.keras.layers.Input(shape=(16,), name='input_a')
@@ -567,8 +561,9 @@ class TestKerasEstimator(tf.test.TestCase, parameterized.TestCase):
             keras_eval[i],
             est_eval[metric_name],
             places=4,
-            msg='%s mismatch, keras model: %s, estimator: %s' %
-            (metric_name, keras_eval[i], est_eval[metric_name]))
+            msg=
+            f'{metric_name} mismatch, keras model: {keras_eval[i]}, estimator: {est_eval[metric_name]}',
+        )
 
     verify_correctness([
         'loss', 'dense_2_loss', 'dense_3_loss', 'dense_2_categorical_accuracy',

@@ -456,7 +456,7 @@ class _TrainingExecutorTrainingTest(object):
   def _run_task(self, executor):
     # We should not call executor.run as the test here is intended to test
     # run_foo explicitly (foo is the task type).
-    return getattr(executor, 'run_' + self._run_config.task_type)()
+    return getattr(executor, f'run_{self._run_config.task_type}')()
 
   @tf.compat.v1.test.mock.patch.object(time, 'sleep')
   @tf.compat.v1.test.mock.patch.object(server_lib, 'Server')
@@ -737,7 +737,7 @@ class TrainingExecutorRunMasterTest(tf.test.TestCase):
     mock_eval_spec = tf.compat.v1.test.mock.Mock(
         spec=training.EvalSpec, exporters=[])
 
-    mock_train_spec.saving_listeners = tuple([])
+    mock_train_spec.saving_listeners = ()
 
     executor = training._TrainingExecutor(mock_est, mock_train_spec,
                                           mock_eval_spec)
@@ -833,7 +833,7 @@ class TrainingExecutorRunMasterTest(tf.test.TestCase):
     mock_eval_spec = tf.compat.v1.test.mock.Mock(
         spec=training.EvalSpec, exporters=[])
 
-    mock_train_spec.saving_listeners = tuple([])
+    mock_train_spec.saving_listeners = ()
 
     executor = training._TrainingExecutor(mock_est, mock_train_spec,
                                           mock_eval_spec)
@@ -854,7 +854,7 @@ class TrainingExecutorRunMasterTest(tf.test.TestCase):
     mock_est.config.task_type = 'master'
     mock_est.config.task_id = 2
 
-    mock_train_spec.saving_listeners = tuple([])
+    mock_train_spec.saving_listeners = ()
 
     with self.assertRaisesRegexp(RuntimeError,
                                  _INVALID_CONFIG_FOR_STD_SERVER_MSG):
@@ -876,7 +876,7 @@ class TrainingExecutorRunMasterTest(tf.test.TestCase):
     mock_est.config.task_type = 'master'
     mock_est.config.task_id = 0
 
-    mock_train_spec.saving_listeners = tuple([])
+    mock_train_spec.saving_listeners = ()
 
     with self.assertRaisesRegexp(RuntimeError,
                                  _INVALID_CONFIG_FOR_STD_SERVER_MSG):
@@ -904,7 +904,7 @@ class TrainingExecutorRunMasterTest(tf.test.TestCase):
     mock_est.config.task_type = 'master'
     mock_est.config.task_id = 0
 
-    mock_train_spec.saving_listeners = tuple([])
+    mock_train_spec.saving_listeners = ()
 
     executor = training._TrainingExecutor(mock_est, mock_train_spec,
                                           mock_eval_spec)
@@ -925,7 +925,7 @@ class TrainingExecutorRunMasterTest(tf.test.TestCase):
     mock_est.config.task_type = ''
     mock_est.config.task_id = 2
 
-    mock_train_spec.saving_listeners = tuple([])
+    mock_train_spec.saving_listeners = ()
 
     with self.assertRaisesRegexp(RuntimeError,
                                  _INVALID_CONFIG_FOR_STD_SERVER_MSG):
@@ -944,7 +944,7 @@ class TrainingExecutorRunMasterTest(tf.test.TestCase):
     mock_est.config.task_type = 'master'
     mock_est.config.task_id = None
 
-    mock_train_spec.saving_listeners = tuple([])
+    mock_train_spec.saving_listeners = ()
 
     with self.assertRaisesRegexp(RuntimeError,
                                  _INVALID_CONFIG_FOR_STD_SERVER_MSG):
@@ -1619,7 +1619,7 @@ class TrainingExecutorRunPsTest(tf.test.TestCase):
     mock_est.config.task_type = 'ps'
     mock_est.config.task_id = 2
 
-    mock_train_spec.saving_listeners = tuple([])
+    mock_train_spec.saving_listeners = ()
 
     with self.assertRaisesRegexp(RuntimeError,
                                  _INVALID_CONFIG_FOR_STD_SERVER_MSG):
@@ -1638,7 +1638,7 @@ class TrainingExecutorRunPsTest(tf.test.TestCase):
     mock_est.config.task_type = 'ps'
     mock_est.config.task_id = 2
 
-    mock_train_spec.saving_listeners = tuple([])
+    mock_train_spec.saving_listeners = ()
 
     with self.assertRaisesRegexp(RuntimeError,
                                  _INVALID_CONFIG_FOR_STD_SERVER_MSG):
@@ -1725,12 +1725,10 @@ class TrainingExecutorRunLocalTest(tf.test.TestCase):
 
   def _input_fn(self, repeat=True):
     ds = tf.compat.v1.data.Dataset.from_tensors([1])
-    if repeat:
-      return ds.repeat()
-    return ds
+    return ds.repeat() if repeat else ds
 
   def unique_checkpoint_every_time_fn(self):
-    return 'checkpoint_path_%s/' % random.random()
+    return f'checkpoint_path_{random.random()}/'
 
   def test_runs_evaluate_with_every_new_checkpoint(self):
     est = estimator_lib.Estimator(

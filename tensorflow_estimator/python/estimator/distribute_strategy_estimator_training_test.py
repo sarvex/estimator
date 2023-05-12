@@ -93,8 +93,8 @@ class DistributeCoordinatorIntegrationTest(
   def _extract_loss_and_global_step(self, event_folder):
     """Returns the loss and global step in last event."""
     event_paths = glob.glob(os.path.join(event_folder, "events*"))
-    self.assertNotEmpty(
-        event_paths, msg="Event file not found in dir %s" % event_folder)
+    self.assertNotEmpty(event_paths,
+                        msg=f"Event file not found in dir {event_folder}")
 
     loss = None
     global_step_count = None
@@ -212,7 +212,7 @@ class DistributeCoordinatorIntegrationTest(
     self.assertIsNotNone(training_loss)
 
     # Examine the eval events. The global step should be accurate.
-    eval_dir = os.path.join(self._model_dir, "eval_" + EVAL_NAME)
+    eval_dir = os.path.join(self._model_dir, f"eval_{EVAL_NAME}")
     eval_loss, eval_global_step = self._extract_loss_and_global_step(
         event_folder=eval_dir)
     self.assertIsNotNone(eval_loss)
@@ -247,11 +247,6 @@ class DistributeCoordinatorIntegrationTest(
         return strategy_cls(
             cross_device_ops=self._make_cross_device_ops(
                 num_gpus_per_worker=context.num_gpus()))
-    elif (strategy_cls == tf.compat.v1.distribute.MirroredStrategy and not eval_strategy):
-      return strategy_cls(
-          num_gpus_per_worker=context.num_gpus(),
-          cross_device_ops=self._make_cross_device_ops(
-              num_gpus_per_worker=context.num_gpus()))
     elif strategy_cls == tf.compat.v1.distribute.experimental.ParameterServerStrategy:
       assert cluster_spec is not None
       cluster_resolver = SimpleClusterResolver(
@@ -426,8 +421,7 @@ class DistributeCoordinatorIntegrationTest(
     for task_type, ts in threads.items():
       if task_type == PS:
         continue
-      for t in ts:
-        threads_to_join.append(t)
+      threads_to_join.extend(iter(ts))
     self.join_independent_workers(threads_to_join)
 
     estimator = self._get_estimator(train_distribute, eval_distribute)

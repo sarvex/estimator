@@ -185,9 +185,8 @@ class EstimatorSpec(
 
   def _replace(self, **kwds):
     """Return a new EstimatorSpec replacing specified fields with new values."""
-    if 'mode' in kwds:
-      if self.mode != kwds['mode']:
-        raise ValueError('mode of EstimatorSpec cannot be changed.')
+    if 'mode' in kwds and self.mode != kwds['mode']:
+      raise ValueError('mode of EstimatorSpec cannot be changed.')
     new_fields = map(kwds.pop, self._fields, list(self))
     return EstimatorSpec(*new_fields)
 
@@ -330,7 +329,7 @@ def _validate_estimator_spec_loss(loss, mode):
     loss = _check_is_tensor(loss, 'loss')
     loss_shape = loss.get_shape()
     if loss_shape.num_elements() not in (None, 1):
-      raise ValueError('Loss must be scalar, given: {}'.format(loss))
+      raise ValueError(f'Loss must be scalar, given: {loss}')
     if not loss_shape.is_compatible_with(tf.TensorShape([])):
       loss = tf.reshape(loss, [])
     if not (tf.executing_eagerly() or loss.graph is default_graph):
@@ -366,7 +365,7 @@ def _validate_estimator_spec_predictions(predictions, mode):
     default_graph = tf.compat.v1.get_default_graph()
     if isinstance(predictions, dict):
       predictions = {
-          k: _check_is_tensor(v, 'predictions[{}]'.format(k))
+          k: _check_is_tensor(v, f'predictions[{k}]')
           for k, v in six.iteritems(predictions)
       }
       if not tf.executing_eagerly():
@@ -433,8 +432,7 @@ def _validate_estimator_spec_hooks(hooks):
 
   for hook in hooks:
     if not isinstance(hook, tf.compat.v1.train.SessionRunHook):
-      raise TypeError(
-          'All hooks must be SessionRunHook instances, given: {}'.format(hook))
+      raise TypeError(f'All hooks must be SessionRunHook instances, given: {hook}')
   return hooks
 
 
@@ -468,8 +466,7 @@ def _validate_eval_metric_ops(eval_metric_ops):
     eval_metric_ops = {}
   else:
     if not isinstance(eval_metric_ops, dict):
-      raise TypeError(
-          'eval_metric_ops must be a dict, given: {}'.format(eval_metric_ops))
+      raise TypeError(f'eval_metric_ops must be a dict, given: {eval_metric_ops}')
     for key, value in six.iteritems(eval_metric_ops):
       # TODO(psv): When we deprecate the old metrics, throw an error here if
       # the value is not an instance of `Metric` class.
@@ -478,11 +475,10 @@ def _validate_eval_metric_ops(eval_metric_ops):
           raise ValueError(
               'Please call update_state(...) on the "{metric_name}" metric'
               .format(metric_name=value.name))
-      else:
-        if not isinstance(value, tuple) or len(value) != 2:
-          raise TypeError(
-              'Values of eval_metric_ops must be (metric_value, update_op) '
-              'tuples, given: {} for key: {}'.format(value, key))
+      elif not isinstance(value, tuple) or len(value) != 2:
+        raise TypeError(
+            f'Values of eval_metric_ops must be (metric_value, update_op) tuples, given: {value} for key: {key}'
+        )
   # Verify all tensors and ops are from default graph.
   default_graph = tf.compat.v1.get_default_graph()
   for key, value in list(six.iteritems(eval_metric_ops)):
@@ -492,7 +488,7 @@ def _validate_eval_metric_ops(eval_metric_ops):
     else:
       values_to_check = tf.nest.flatten(value)
     for val in values_to_check:
-      if not (tf.executing_eagerly() or val.graph is default_graph):
+      if not tf.executing_eagerly() and val.graph is not default_graph:
         raise ValueError(
             _default_graph_error_message_template.format(
                 'eval_metric_ops', '{0}: {1}'.format(key, val.name)))
@@ -541,21 +537,20 @@ def _validate_scaffold(scaffold):
   """
   scaffold = scaffold or tf.compat.v1.train.Scaffold()
   if not isinstance(scaffold, tf.compat.v1.train.Scaffold):
-    raise TypeError(
-        'scaffold must be tf.train.Scaffold. Given: {}'.format(scaffold))
+    raise TypeError(f'scaffold must be tf.train.Scaffold. Given: {scaffold}')
   return scaffold
 
 
 def _check_is_tensor_or_operation(x, name):
   # TODO(b/154650521): Use tf.Tensor instead of core.Tensor.
   if not isinstance(x, (tf.Operation, tf.compat.v2.__internal__.types.Tensor)):
-    raise TypeError('{} must be Operation or Tensor, given: {}'.format(name, x))
+    raise TypeError(f'{name} must be Operation or Tensor, given: {x}')
 
 
 def _check_is_tensor(x, tensor_name):
   """Returns `x` if it is a `Tensor`, raises TypeError otherwise."""
   if not isinstance(x, tf.compat.v2.__internal__.types.Tensor):
-    raise TypeError('{} must be Tensor, given: {}'.format(tensor_name, x))
+    raise TypeError(f'{tensor_name} must be Tensor, given: {x}')
   return x
 
 
@@ -593,10 +588,9 @@ def call_logit_fn(logit_fn, features, mode, params, config):
     kwargs['config'] = config
   logit_fn_results = logit_fn(features=features, **kwargs)
 
-  result_is_valid_dictionary = (
-      isinstance(logit_fn_results, dict) and
-      all([(isinstance(k, six.string_types) and isinstance(v, tf.Tensor))
-           for k, v in six.iteritems(logit_fn_results)]))
+  result_is_valid_dictionary = isinstance(logit_fn_results, dict) and all(
+      (isinstance(k, six.string_types) and isinstance(v, tf.Tensor))
+      for k, v in six.iteritems(logit_fn_results))
   result_is_tensor = isinstance(logit_fn_results, tf.Tensor)
 
   if not (result_is_valid_dictionary or result_is_tensor):
@@ -607,24 +601,30 @@ def call_logit_fn(logit_fn, features, mode, params, config):
   return logit_fn_results
 
 
-_VALID_MODEL_FN_ARGS = set(
-    ['features', 'labels', 'mode', 'params', 'self', 'config'])
+_VALID_MODEL_FN_ARGS = {
+    'features',
+    'labels',
+    'mode',
+    'params',
+    'self',
+    'config',
+}
 
 
 def verify_model_fn_args(model_fn, params):
   """Verifies `model_fn` arguments."""
   args = set(function_utils.fn_args(model_fn))
   if 'features' not in args:
-    raise ValueError('model_fn (%s) must include features argument.' % model_fn)
+    raise ValueError(f'model_fn ({model_fn}) must include features argument.')
   if params is not None and 'params' not in args:
-    raise ValueError('model_fn (%s) does not include params argument, '
-                     'but params (%s) is passed to Estimator.' %
-                     (model_fn, params))
+    raise ValueError(
+        f'model_fn ({model_fn}) does not include params argument, but params ({params}) is passed to Estimator.'
+    )
   if params is None and 'params' in args:
     tf.compat.v1.logging.warn(
         'Estimator\'s model_fn (%s) includes params '
         'argument, but params are not passed to Estimator.', model_fn)
-  non_valid_args = list(args - _VALID_MODEL_FN_ARGS)
-  if non_valid_args:
-    raise ValueError('model_fn (%s) has following not expected args: %s' %
-                     (model_fn, non_valid_args))
+  if non_valid_args := list(args - _VALID_MODEL_FN_ARGS):
+    raise ValueError(
+        f'model_fn ({model_fn}) has following not expected args: {non_valid_args}'
+    )

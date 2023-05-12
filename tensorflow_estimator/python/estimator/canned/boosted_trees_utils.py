@@ -72,10 +72,7 @@ def _parse_explanations_from_prediction(serialized_debug_proto,
   """Parse serialized explanability proto, compute dfc, and return bias, dfc."""
   example_feature_ids, example_logits_path = _parse_debug_proto_string(
       serialized_debug_proto)
-  if classification:
-    activation = _sigmoid
-  else:
-    activation = _identity
+  activation = _sigmoid if classification else _identity
   bias, dfcs = _compute_directional_feature_contributions(
       example_feature_ids, example_logits_path, activation, feature_col_names)
   # TODO(crawles): Prediction path and leaf IDs.

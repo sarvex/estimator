@@ -147,9 +147,8 @@ class SavedModelEstimatorTest(tf.test.TestCase):
       input_receiver_fn_map[ModeKeys.PREDICT] = (dummy_serving_receiver_fn())
 
     export_base_path = self._get_tmp_dir()
-    export_dir = est.experimental_export_all_saved_models(
-        export_base_path, input_receiver_fn_map)
-    return export_dir
+    return est.experimental_export_all_saved_models(export_base_path,
+                                                    input_receiver_fn_map)
 
   def test_load_all_modes(self):
     sme = saved_model_estimator.SavedModelEstimator(self._export_estimator(),

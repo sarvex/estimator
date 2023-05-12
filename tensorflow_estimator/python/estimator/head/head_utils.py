@@ -50,18 +50,16 @@ def binary_or_multi_class_head(n_classes, weight_column, label_vocabulary,
   Returns:
     A `Head` instance.
   """
-  if n_classes == 2:
-    head = binary_class_head.BinaryClassHead(
-        weight_column=weight_column,
-        label_vocabulary=label_vocabulary,
-        loss_reduction=loss_reduction)
-  else:
-    head = multi_class_head.MultiClassHead(
-        n_classes,
-        weight_column=weight_column,
-        label_vocabulary=label_vocabulary,
-        loss_reduction=loss_reduction)
-  return head
+  return (binary_class_head.BinaryClassHead(
+      weight_column=weight_column,
+      label_vocabulary=label_vocabulary,
+      loss_reduction=loss_reduction,
+  ) if n_classes == 2 else multi_class_head.MultiClassHead(
+      n_classes,
+      weight_column=weight_column,
+      label_vocabulary=label_vocabulary,
+      loss_reduction=loss_reduction,
+  ))
 
 
 def _initialize_variables(test_case, scaffold):

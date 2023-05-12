@@ -404,13 +404,12 @@ class KMeansClustering(estimator.Estimator):
     if isinstance(initial_clusters, str) and initial_clusters not in [
         KMeansClustering.RANDOM_INIT, KMeansClustering.KMEANS_PLUS_PLUS_INIT
     ]:
-      raise ValueError("Unsupported initialization algorithm '%s'" %
-                       initial_clusters)
+      raise ValueError(f"Unsupported initialization algorithm '{initial_clusters}'")
     if distance_metric not in [
         KMeansClustering.SQUARED_EUCLIDEAN_DISTANCE,
         KMeansClustering.COSINE_DISTANCE
     ]:
-      raise ValueError("Unsupported distance metric '%s'" % distance_metric)
+      raise ValueError(f"Unsupported distance metric '{distance_metric}'")
     self._distance_metric = distance_metric
     super(KMeansClustering, self).__init__(
         model_fn=_ModelFn(num_clusters, initial_clusters, distance_metric, seed,
@@ -433,9 +432,7 @@ class KMeansClustering(estimator.Estimator):
     Yields:
       The index of the closest cluster center for each input point.
     """
-    for index in self._predict_one_key(input_fn,
-                                       KMeansClustering.CLUSTER_INDEX):
-      yield index
+    yield from self._predict_one_key(input_fn, KMeansClustering.CLUSTER_INDEX)
 
   def score(self, input_fn):
     """Returns the sum of squared distances to nearest clusters.

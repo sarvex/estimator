@@ -41,7 +41,7 @@ def _generate_data():
   time = tf.range(20, dtype=tf.dtypes.int64)
   data = tf.reshape(tf.range(20, dtype=tf.dtypes.float32), (20, 1))
   exogenous = data
-  return time, data, exogenous
+  return time, exogenous, exogenous
 
 
 def _build_input_fn_with_seed(seed):

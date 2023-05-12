@@ -282,34 +282,35 @@ class _SDCAModel(object):
       for var in self._variables[name]:
         # Our primary variable may be either a PartitionedVariable, or a list
         # of Variables (each representing a partition).
-        if (isinstance(var, var_ops.PartitionedVariable) or
-            isinstance(var, list)):
+        if isinstance(var, (var_ops.PartitionedVariable, list)):
           var_list = []
           for v in var:
             with ops.colocate_with(v):
               slot_var = tf.Variable(
                   initial_value=tf.compat.v1.zeros_like(v.initialized_value(),
                                                         tf.dtypes.float32),
-                  name=v.op.name + '_unshrunk')
+                  name=f'{v.op.name}_unshrunk',
+              )
               var_list.append(slot_var)
-          self._slots['unshrunk_' + name].append(var_list)
+          self._slots[f'unshrunk_{name}'].append(var_list)
         else:
           with tf.compat.v1.device(var.device):
-            self._slots['unshrunk_' + name].append(
+            self._slots[f'unshrunk_{name}'].append(
                 tf.Variable(
                     tf.compat.v1.zeros_like(var.initialized_value(),
                                             tf.dtypes.float32),
-                    name=var.op.name + '_unshrunk'))
+                    name=f'{var.op.name}_unshrunk',
+                ))
 
   def _assert_specified(self, items, check_in):
     for x in items:
       if check_in[x] is None:
-        raise ValueError(check_in[x] + ' must be specified.')
+        raise ValueError(f'{check_in[x]} must be specified.')
 
   def _assert_list(self, items, check_in):
     for x in items:
       if not isinstance(check_in[x], list):
-        raise ValueError(x + ' must be a list.')
+        raise ValueError(f'{x} must be a list.')
 
   def _var_to_list(self, var):
     """Wraps var in a list if it is not a list or PartitionedVariable."""
@@ -356,7 +357,7 @@ class _SDCAModel(object):
     output_list = []
     for x in input_list:
       tensor_to_convert = x
-      if isinstance(x, list) or isinstance(x, var_ops.PartitionedVariable):
+      if isinstance(x, (list, var_ops.PartitionedVariable)):
         # We only allow for partitioning on the first axis.
         tensor_to_convert = tf.concat(x, axis=0)
       output_list.append(
@@ -494,7 +495,7 @@ class _SDCAModel(object):
         sparse_idx = tf.cast(
             tf.unique(tf.cast(i, tf.dtypes.int32))[0], tf.dtypes.int64)
         sparse_indices.append(sparse_idx)
-        if isinstance(w, list) or isinstance(w, var_ops.PartitionedVariable):
+        if isinstance(w, (list, var_ops.PartitionedVariable)):
           num_partitions = len(w)
           flat_ids = tf.reshape(sparse_idx, [-1])
           # We use div partitioning, which is easiest to support downstream.
@@ -607,16 +608,14 @@ class _SDCAModel(object):
         for v_num, (w, i, u) in enumerate(
             zip(self._slots['unshrunk_sparse_features_weights'], sparse_indices,
                 sfw)):
-          if (isinstance(w, var_ops.PartitionedVariable) or
-              isinstance(w, list)):
+          if isinstance(w, (var_ops.PartitionedVariable, list)):
             update_ops += self._get_partitioned_update_ops(
                 v_num, num_partitions_by_var, p_assignments_by_var,
                 gather_ids_by_var, w, u, p_assignments, num_partitions)
           else:
             update_ops.append(tf.compat.v1.scatter_add(w, i, u))
         for w, u in zip(self._slots['unshrunk_dense_features_weights'], dfw):
-          if (isinstance(w, var_ops.PartitionedVariable) or
-              isinstance(w, list)):
+          if isinstance(w, (var_ops.PartitionedVariable, list)):
             split_updates = tf.split(
                 u, num_or_size_splits=[v.shape.as_list()[0] for v in w])
             for v, split_update in zip(w, split_updates):
@@ -645,28 +644,25 @@ class _SDCAModel(object):
       update_ops = []
       # Copy over unshrunk weights to user provided variables.
       for name in ['sparse_features_weights', 'dense_features_weights']:
-        for var, slot_var in zip(self._variables[name],
-                                 self._slots['unshrunk_' + name]):
-          for v, sv in zip(self._var_to_list(var), self._var_to_list(slot_var)):
-            update_ops.append(v.assign(sv))
-
-    # Apply proximal step.
-    if self._symmetric_l1_regularization() > 0:
-      shrinkage = (
-          self._symmetric_l1_regularization() /
-          self._symmetric_l2_regularization())
-      with tf.control_dependencies(update_ops):
-        update_ops = []
-        for name in ['sparse_features_weights', 'dense_features_weights']:
-          for var in self._variables[name]:
-            for v in self._var_to_list(var):
-              with tf.compat.v1.device(v.device):
-                v_shrunk = tf.math.sign(v) * tf.math.maximum(
-                    0.0,
-                    tf.math.abs(v) - shrinkage)
-                update_ops.append(v.assign(v_shrunk))
-        return tf.group(*update_ops)
-    else:
+        for var, slot_var in zip(self._variables[name], self._slots[f'unshrunk_{name}']):
+          update_ops.extend(
+              v.assign(sv) for v, sv in zip(self._var_to_list(var),
+                                            self._var_to_list(slot_var)))
+    if self._symmetric_l1_regularization() <= 0:
+      return tf.group(*update_ops)
+    shrinkage = (
+        self._symmetric_l1_regularization() /
+        self._symmetric_l2_regularization())
+    with tf.control_dependencies(update_ops):
+      update_ops = []
+      for name in ['sparse_features_weights', 'dense_features_weights']:
+        for var in self._variables[name]:
+          for v in self._var_to_list(var):
+            with tf.compat.v1.device(v.device):
+              v_shrunk = tf.math.sign(v) * tf.math.maximum(
+                  0.0,
+                  tf.math.abs(v) - shrinkage)
+              update_ops.append(v.assign(v_shrunk))
       return tf.group(*update_ops)
 
   def approximate_duality_gap(self):

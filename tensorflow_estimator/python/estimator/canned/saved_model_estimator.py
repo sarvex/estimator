@@ -156,14 +156,13 @@ class SavedModelEstimator(estimator_lib.EstimatorV2):
       try:
         self._get_meta_graph_def_for_mode(mode)
       except RuntimeError:
-        tf.compat.v1.logging.warn('%s mode not found in SavedModel.' % mode)
+        tf.compat.v1.logging.warn(f'{mode} mode not found in SavedModel.')
         continue
 
       if self._get_signature_def_for_mode(mode) is not None:
         available_modes.append(mode)
 
-    tf.compat.v1.logging.info('Available modes for Estimator: %s' %
-                              available_modes)
+    tf.compat.v1.logging.info(f'Available modes for Estimator: {available_modes}')
     return available_modes
 
   def _validate_mode(self, mode):
@@ -310,8 +309,9 @@ def _get_saved_model_ckpt(saved_model_dir):
       os.path.join(
           saved_model_utils.get_variables_dir(saved_model_dir),
           tf.compat.as_text('variables.index'))):
-    raise ValueError('Directory provided has an invalid SavedModel format: %s' %
-                     saved_model_dir)
+    raise ValueError(
+        f'Directory provided has an invalid SavedModel format: {saved_model_dir}'
+    )
   return saved_model_utils.get_variables_path(saved_model_dir)
 
 
@@ -365,7 +365,7 @@ def _generate_input_map(signature_def, features, labels):
     # When tensors are used as control inputs for operations, their names are
     # prepended with a '^' character in the GraphDef. To handle possible control
     # flow edge cases, control input names must be included in the input map.
-    control_dependency_name = '^' + input_name
+    control_dependency_name = f'^{input_name}'
 
     if key in features:
       _check_same_dtype_and_shape(features[key], tensor_info, key)
@@ -396,7 +396,7 @@ def _check_same_dtype_and_shape(tensor, tensor_info, name):
   shape_error = not tensor.shape.is_compatible_with(tensor_info.tensor_shape)
 
   if dtype_error or shape_error:
-    msg = 'Tensor shape and/or dtype validation failed for input %s:' % name
+    msg = f'Tensor shape and/or dtype validation failed for input {name}:'
     if dtype_error:
       msg += ('\n\tExpected dtype: %s, Got: %s' %
               (tf.dtypes.DType(tensor_info.dtype), tensor.dtype))
@@ -430,17 +430,15 @@ def _extract_eval_metrics(output_dict):
     # The metric name may contain the separator character, so recreate its name.
     metric_name = separator_char.join(split_key[:-1])
 
-    if split_key[0] == export_lib._SupervisedOutput.METRICS_NAME:
-      # If the key ends with the value suffix, and there is a corresponding
-      # key ending with the update_op suffix, then add tensors to metrics dict.
-      if split_key[-1] == export_lib._SupervisedOutput.METRIC_VALUE_SUFFIX:
-        update_op = ''.join([
-            metric_name, separator_char,
-            export_lib._SupervisedOutput.METRIC_UPDATE_SUFFIX
-        ])
-        if update_op in output_dict:
-          update_op_tensor = output_dict[update_op]
-          metric_ops[metric_name] = (tensor, update_op_tensor)
+    if (split_key[0] == export_lib._SupervisedOutput.METRICS_NAME
+        and split_key[-1] == export_lib._SupervisedOutput.METRIC_VALUE_SUFFIX):
+      update_op = ''.join([
+          metric_name, separator_char,
+          export_lib._SupervisedOutput.METRIC_UPDATE_SUFFIX
+      ])
+      if update_op in output_dict:
+        update_op_tensor = output_dict[update_op]
+        metric_ops[metric_name] = (tensor, update_op_tensor)
 
   # pylint: enable=protected-access
   return metric_ops

@@ -31,12 +31,14 @@ def fully_connected(inp,
                     activation=tf.nn.relu,
                     dtype=tf.dtypes.float32):
   """Helper method to create a fully connected hidden layer."""
-  wt = tf.compat.v1.get_variable(
-      name="{}_weight".format(name), shape=[inp_size, layer_size], dtype=dtype)
+  wt = tf.compat.v1.get_variable(name=f"{name}_weight",
+                                 shape=[inp_size, layer_size],
+                                 dtype=dtype)
   bias = tf.compat.v1.get_variable(
-      name="{}_bias".format(name),
+      name=f"{name}_bias",
       shape=[layer_size],
-      initializer=tf.compat.v1.initializers.zeros())
+      initializer=tf.compat.v1.initializers.zeros(),
+  )
   output = tf.compat.v1.nn.xw_plus_b(inp, wt, bias)
   if activation is not None:
     assert callable(activation)
@@ -58,19 +60,11 @@ def canonicalize_times_or_steps_from_output(times, steps,
     if (previous_model_output[feature_keys.FilteringResults.TIMES].shape[0] !=
         times.shape[0]):
       raise ValueError(
-          ("`times` must have a batch dimension matching"
-           " the previous model output (got a batch dimension of {} for `times`"
-           " and {} for the previous model output).").format(
-               times.shape[0], previous_model_output[
-                   feature_keys.FilteringResults.TIMES].shape[0]))
+          f"`times` must have a batch dimension matching the previous model output (got a batch dimension of {times.shape[0]} for `times` and {previous_model_output[feature_keys.FilteringResults.TIMES].shape[0]} for the previous model output)."
+      )
     if not (previous_model_output[feature_keys.FilteringResults.TIMES][:, -1] <
             times[:, 0]).all():
       raise ValueError("Prediction times must be after the corresponding "
                        "previous model output.")
-  if steps is not None:
-    predict_times = (
-        previous_model_output[feature_keys.FilteringResults.TIMES][:, -1:] + 1 +
-        numpy.arange(steps)[None, ...])
-  else:
-    predict_times = times
-  return predict_times
+  return ((previous_model_output[feature_keys.FilteringResults.TIMES][:, -1:] +
+           1 + numpy.arange(steps)[None, ...]) if steps is not None else times)

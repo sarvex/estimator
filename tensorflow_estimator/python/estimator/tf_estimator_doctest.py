@@ -58,12 +58,10 @@ def find_modules():
     A list containing all the modules in tensorflow.python.
   """
 
-  tf_modules = []
-  for name, module in sys.modules.items():
-    if name.startswith(PACKAGE):
-      tf_modules.append(module)
-
-  return tf_modules
+  return [
+      module for name, module in sys.modules.items()
+      if name.startswith(PACKAGE)
+  ]
 
 
 def filter_on_submodules(all_modules, submodule):
@@ -81,10 +79,7 @@ def filter_on_submodules(all_modules, submodule):
     All the modules in the submodule.
   """
 
-  filtered_modules = [
-      mod for mod in all_modules if PACKAGE + submodule in mod.__name__
-  ]
-  return filtered_modules
+  return [mod for mod in all_modules if PACKAGE + submodule in mod.__name__]
 
 
 def get_module_and_inject_docstring(file_path):

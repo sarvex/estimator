@@ -186,9 +186,7 @@ class TrainEvalFeatureCheckingTests(tf.test.TestCase):
   def test_no_time_feature(self):
     model_fn = _stub_model_fn()
     for mode in [estimator_lib.ModeKeys.TRAIN, estimator_lib.ModeKeys.EVAL]:
-      with self.assertRaisesRegexp(
-          ValueError, "Expected a '{}' feature".format(
-              feature_keys.TrainEvalFeatures.TIMES)):
+      with self.assertRaisesRegexp(ValueError, f"Expected a '{feature_keys.TrainEvalFeatures.TIMES}' feature"):
         model_fn(
             features={feature_keys.TrainEvalFeatures.VALUES: [[[1.]]]},
             labels=None,
@@ -197,9 +195,7 @@ class TrainEvalFeatureCheckingTests(tf.test.TestCase):
   def test_no_value_feature(self):
     model_fn = _stub_model_fn()
     for mode in [estimator_lib.ModeKeys.TRAIN, estimator_lib.ModeKeys.EVAL]:
-      with self.assertRaisesRegexp(
-          ValueError, "Expected a '{}' feature".format(
-              feature_keys.TrainEvalFeatures.VALUES)):
+      with self.assertRaisesRegexp(ValueError, f"Expected a '{feature_keys.TrainEvalFeatures.VALUES}' feature"):
         model_fn(
             features={feature_keys.TrainEvalFeatures.TIMES: [[1]]},
             labels=None,
@@ -208,9 +204,7 @@ class TrainEvalFeatureCheckingTests(tf.test.TestCase):
   def test_bad_time_rank(self):
     model_fn = _stub_model_fn()
     for mode in [estimator_lib.ModeKeys.TRAIN, estimator_lib.ModeKeys.EVAL]:
-      with self.assertRaisesRegexp(
-          ValueError, "Expected shape.*for feature '{}'".format(
-              feature_keys.TrainEvalFeatures.TIMES)):
+      with self.assertRaisesRegexp(ValueError, f"Expected shape.*for feature '{feature_keys.TrainEvalFeatures.TIMES}'"):
         model_fn(
             features={
                 feature_keys.TrainEvalFeatures.TIMES: [[[1]]],
@@ -222,9 +216,7 @@ class TrainEvalFeatureCheckingTests(tf.test.TestCase):
   def test_bad_value_rank(self):
     model_fn = _stub_model_fn()
     for mode in [estimator_lib.ModeKeys.TRAIN, estimator_lib.ModeKeys.EVAL]:
-      with self.assertRaisesRegexp(
-          ValueError, "Expected shape.*for feature '{}'".format(
-              feature_keys.TrainEvalFeatures.VALUES)):
+      with self.assertRaisesRegexp(ValueError, f"Expected shape.*for feature '{feature_keys.TrainEvalFeatures.VALUES}'"):
         model_fn(
             features={
                 feature_keys.TrainEvalFeatures.TIMES: [[1]],
@@ -236,9 +228,7 @@ class TrainEvalFeatureCheckingTests(tf.test.TestCase):
   def test_bad_value_num_features(self):
     model_fn = _stub_model_fn()
     for mode in [estimator_lib.ModeKeys.TRAIN, estimator_lib.ModeKeys.EVAL]:
-      with self.assertRaisesRegexp(
-          ValueError, "Expected shape.*, 3.*for feature '{}'".format(
-              feature_keys.TrainEvalFeatures.VALUES)):
+      with self.assertRaisesRegexp(ValueError, f"Expected shape.*, 3.*for feature '{feature_keys.TrainEvalFeatures.VALUES}'"):
         model_fn(
             features={
                 feature_keys.TrainEvalFeatures.TIMES: [[1]],
@@ -266,9 +256,7 @@ class PredictFeatureCheckingTests(tf.test.TestCase):
 
   def test_no_time_feature(self):
     model_fn = _stub_model_fn()
-    with self.assertRaisesRegexp(
-        ValueError, "Expected a '{}' feature".format(
-            feature_keys.PredictionFeatures.TIMES)):
+    with self.assertRaisesRegexp(ValueError, f"Expected a '{feature_keys.PredictionFeatures.TIMES}' feature"):
       model_fn(
           features={
               feature_keys.PredictionFeatures.STATE_TUPLE: ([[[1.]]], 1.)
@@ -278,9 +266,7 @@ class PredictFeatureCheckingTests(tf.test.TestCase):
 
   def test_no_start_state_feature(self):
     model_fn = _stub_model_fn()
-    with self.assertRaisesRegexp(
-        ValueError, "Expected a '{}' feature".format(
-            feature_keys.PredictionFeatures.STATE_TUPLE)):
+    with self.assertRaisesRegexp(ValueError, f"Expected a '{feature_keys.PredictionFeatures.STATE_TUPLE}' feature"):
       model_fn(
           features={feature_keys.PredictionFeatures.TIMES: [[1]]},
           labels=None,
@@ -288,9 +274,7 @@ class PredictFeatureCheckingTests(tf.test.TestCase):
 
   def test_bad_time_rank(self):
     model_fn = _stub_model_fn()
-    with self.assertRaisesRegexp(
-        ValueError, "Expected shape.*for feature '{}'".format(
-            feature_keys.PredictionFeatures.TIMES)):
+    with self.assertRaisesRegexp(ValueError, f"Expected shape.*for feature '{feature_keys.PredictionFeatures.TIMES}'"):
       model_fn(
           features={
               feature_keys.PredictionFeatures.TIMES: 1,

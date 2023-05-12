@@ -77,7 +77,7 @@ def _is_numeric_column(feature_column):
     # NOTE: GBDT requires that all DenseColumns expose a dtype attribute
     return feature_column.dtype.is_floating
   else:
-    raise ValueError('Encountered unexpected column {}'.format(feature_column))
+    raise ValueError(f'Encountered unexpected column {feature_column}')
 
 
 def _get_feature_dimensions(feature_ids_list, input_feature_list):
@@ -93,8 +93,8 @@ def _get_feature_dimensions(feature_ids_list, input_feature_list):
   # TODO(crawles): group feature dimensions by bucket (similar to feature_ids).
   feature_dimensions = []
   for feature_ids in feature_ids_list:
-    for feature_id in feature_ids:
-      feature_dimensions.append(input_feature_list[feature_id].shape[1])
+    feature_dimensions.extend(input_feature_list[feature_id].shape[1]
+                              for feature_id in feature_ids)
   return feature_dimensions
 
 
@@ -107,11 +107,10 @@ def _get_float_feature_columns(sorted_feature_columns):
   Returns:
     float_columns: a list of float feature columns sorted by name.
   """
-  float_columns = []
-  for feature_column in sorted_feature_columns:
-    if _is_numeric_column(feature_column):
-      float_columns.append(feature_column)
-  return float_columns
+  return [
+      feature_column for feature_column in sorted_feature_columns
+      if _is_numeric_column(feature_column)
+  ]
 
 
 def _apply_feature_transformations(features, feature_columns):
@@ -212,18 +211,18 @@ def _get_transformed_features_and_merge_with_previously_transformed(
       source_name = column.source_column.name
       bucketized_feature = transformed_features[column]
       if len(bucketized_feature.shape) > 2:
-        raise ValueError('For now, only supports features equivalent to rank 2 '
-                         'but column `{}` got: {}'.format(
-                             source_name, features[source_name].shape))
+        raise ValueError(
+            f'For now, only supports features equivalent to rank 2 but column `{source_name}` got: {features[source_name].shape}'
+        )
       result_features.append(bucketized_feature)
     elif isinstance(
         column, (feature_column_lib.IndicatorColumn, fc_old._IndicatorColumn)):
       source_name = column.categorical_column.name
       tensor = tf.cast(transformed_features[column], dtype=tf.dtypes.int32)
       if len(tensor.shape) > 2:
-        raise ValueError('Rank of indicator column must be no more than 2, '
-                         'but column `{}` got: {}'.format(
-                             source_name, features[source_name].shape))
+        raise ValueError(
+            f'Rank of indicator column must be no more than 2, but column `{source_name}` got: {features[source_name].shape}'
+        )
       # TODO(nponomareva): consider treating as one, multi-dimensional feature
       # now that multi-dimensional features are supported.
       unstacked = [
@@ -237,9 +236,9 @@ def _get_transformed_features_and_merge_with_previously_transformed(
       tensor = transformed_features[column]
       # TODO(tanzheny): Add support for multi dim with rank > 1
       if _get_variable_shape(column).rank > 1:
-        raise ValueError('For now, we only support Dense column with rank of '
-                         '1, but column `{}` got: {}'.format(
-                             source_name, column.variable_shape))
+        raise ValueError(
+            f'For now, we only support Dense column with rank of 1, but column `{source_name}` got: {column.variable_shape}'
+        )
       # TODO(nponomareva): consider treating as one, multi-dimensional feature
       # now that multi-dimensional features are supported.
       if not bucket_boundaries_dict:
@@ -269,7 +268,7 @@ def _get_transformed_features_and_merge_with_previously_transformed(
       result_features.append(dense)
     else:
       raise ValueError('Got unexpected feature column type'.format(column))
-    # pylint:enable=protected-access
+      # pylint:enable=protected-access
 
   return result_features
 
@@ -362,7 +361,7 @@ def _group_features_by_num_buckets_and_split_type(sorted_feature_columns,
           (feature_idx, _EQUALITY_SPLIT))
       feature_idx += 1
     else:
-      raise ValueError('Got unexpected feature column type: {}'.format(column))
+      raise ValueError(f'Got unexpected feature column type: {column}')
 
   # Replace the dummy key with the real max num of buckets for all bucketized
   # columns.
@@ -449,8 +448,7 @@ def _generate_feature_col_name_mapping(sorted_feature_columns):
       else:
         assert hasattr(categorical_column, '_num_buckets')
         one_hot_depth = categorical_column._num_buckets
-      for _ in range(one_hot_depth):
-        names.append(categorical_column.name)
+      names.extend(categorical_column.name for _ in range(one_hot_depth))
     elif isinstance(
         column,
         (feature_column_lib.BucketizedColumn, fc_old._BucketizedColumn)):
@@ -459,8 +457,7 @@ def _generate_feature_col_name_mapping(sorted_feature_columns):
                     (fc_old._DenseColumn, tf.compat.v2.__internal__.feature_column.DenseColumn)):
       num_float_features = _get_variable_shape(
           column)[0] if _get_variable_shape(column).as_list() else 1
-      for _ in range(num_float_features):
-        names.append(column.name)
+      names.extend(column.name for _ in range(num_float_features))
     elif isinstance(
         column,
         (feature_column_lib.CategoricalColumn, fc_old._CategoricalColumn)):
@@ -602,8 +599,7 @@ class _CacheTrainingStatesUsingHashTable(object):
       empty_key = ''
       deleted_key = 'NEVER_USED_DELETED_KEY'
     else:
-      raise ValueError('Unsupported example_id_feature dtype %s.' %
-                       example_ids.dtype)
+      raise ValueError(f'Unsupported example_id_feature dtype {example_ids.dtype}.')
     # Cache holds latest <tree_id, node_id, logits> for each example.
     # tree_id and node_id are both int32 but logits is a float32.
     # To reduce the overhead, we store all of them together as float32 and
@@ -615,8 +611,7 @@ class _CacheTrainingStatesUsingHashTable(object):
         value_shape=[3])
     self._example_ids = ops.convert_to_tensor(example_ids)
     if self._example_ids.shape.ndims not in (None, 1):
-      raise ValueError('example_id should have rank 1, but got %s' %
-                       self._example_ids)
+      raise ValueError(f'example_id should have rank 1, but got {self._example_ids}')
     self._logits_dimension = logits_dimension
 
   def lookup(self):
@@ -639,18 +634,21 @@ class _CacheTrainingStatesUsingHashTable(object):
 
   def insert(self, tree_ids, node_ids, logits):
     """Inserts values and returns the op."""
-    insert_op = lookup_ops.lookup_table_insert_v2(
-        self._table_ref, self._example_ids,
-        tf.concat([
-            tf.compat.v1.expand_dims(
-                tf.bitcast(tree_ids, tf.dtypes.float32), 1),
-            tf.compat.v1.expand_dims(
-                tf.bitcast(node_ids, tf.dtypes.float32), 1),
-            logits,
-        ],
-                  axis=1,
-                  name='value_concat_for_cache_insert'))
-    return insert_op
+    return lookup_ops.lookup_table_insert_v2(
+        self._table_ref,
+        self._example_ids,
+        tf.concat(
+            [
+                tf.compat.v1.expand_dims(tf.bitcast(tree_ids, tf.dtypes.float32),
+                                         1),
+                tf.compat.v1.expand_dims(tf.bitcast(node_ids, tf.dtypes.float32),
+                                         1),
+                logits,
+            ],
+            axis=1,
+            name='value_concat_for_cache_insert',
+        ),
+    )
 
 
 class _CacheTrainingStatesUsingVariables(object):
@@ -725,9 +723,7 @@ class _StopAtAttemptsHook(tf.compat.v1.train.SessionRunHook):
 
 def _get_max_splits(tree_hparams):
   """Calculates the max possible number of splits based on tree params."""
-  # maximum number of splits possible in the whole tree =2^(D-1)-1
-  max_splits = (1 << tree_hparams.max_depth) - 1
-  return max_splits
+  return (1 << tree_hparams.max_depth) - 1
 
 
 class _EnsembleGrower(object):
@@ -770,9 +766,8 @@ class _EnsembleGrower(object):
       if self._pruning_mode_parsed == boosted_trees_ops.PruningMode.NO_PRUNING:
         raise ValueError(
             'Tree complexity have no effect unless pruning mode is chosen.')
-    else:
-      if self._pruning_mode_parsed != boosted_trees_ops.PruningMode.NO_PRUNING:
-        raise ValueError('For pruning, tree_complexity must be positive.')
+    elif self._pruning_mode_parsed != boosted_trees_ops.PruningMode.NO_PRUNING:
+      raise ValueError('For pruning, tree_complexity must be positive.')
     # pylint: enable=protected-access
 
   @abc.abstractmethod
@@ -870,7 +865,7 @@ class _EnsembleGrower(object):
       thresholds_list.append(thresholds)
       left_node_contribs_list.append(left_node_contribs)
       right_node_contribs_list.append(right_node_contribs)
-    grow_op = boosted_trees_ops.update_ensemble_v2(
+    return boosted_trees_ops.update_ensemble_v2(
         # Confirm if local_tree_ensemble or tree_ensemble should be used.
         self._tree_ensemble.resource_handle,
         feature_ids=best_feature_ids_list,
@@ -884,8 +879,8 @@ class _EnsembleGrower(object):
         learning_rate=self._tree_hparams.learning_rate,
         max_depth=self._tree_hparams.max_depth,
         pruning_mode=self._pruning_mode_parsed,
-        logits_dimension=self._logits_dimension)
-    return grow_op
+        logits_dimension=self._logits_dimension,
+    )
 
 
 class _InMemoryEnsembleGrower(_EnsembleGrower):
@@ -948,25 +943,23 @@ class _AccumulatorEnsembleGrower(_EnsembleGrower):
     self._growing_accumulators = []
     self._chief_init_ops = []
     max_splits = _get_max_splits(self._tree_hparams)
-    i = 0
     # TODO(crawles): Allow to create an accumulator per feature, instead of
     # accumulator per bucket_size.
-    for bucket_size, feature_ids in zip(self._bucket_size_list,
-                                        self._feature_ids_list):
+    for i, (bucket_size, feature_ids) in enumerate(zip(self._bucket_size_list,
+                                        self._feature_ids_list)):
       grad_size = logits_dimension
       hessian_size = logits_dimension * logits_dimension
       accumulator = _accumulator(
           dtype=tf.dtypes.float32,
-          # The stats consist of grads and hessians (the last dimension).
           shape=[
               len(feature_ids),
               max_splits,
               1,  # TODO(crawles): Support multi_dim features.
               bucket_size + 1,  # +1 for missing/default bucket.
-              grad_size + hessian_size
+              grad_size + hessian_size,
           ],
-          shared_name='numeric_stats_summary_accumulator_' + str(i))
-      i += 1
+          shared_name=f'numeric_stats_summary_accumulator_{str(i)}',
+      )
       self._chief_init_ops.append(
           accumulator.set_global_step(self._stamp_token))
       self._growing_accumulators.append(accumulator)
@@ -1268,7 +1261,7 @@ def _bt_model_fn(features,
       # Have a local copy of ensemble for the distributed setting.
       with tf.compat.v1.device(worker_device):
         local_tree_ensemble = boosted_trees_ops.TreeEnsemble(
-            name=name + '_local', is_local=True)
+            name=f'{name}_local', is_local=True)
       # TODO(soroush): Do partial updates if this becomes a bottleneck.
       ensemble_reload = local_tree_ensemble.deserialize(
           *tree_ensemble.serialize())
@@ -1596,7 +1589,7 @@ def _compute_feature_importances_per_tree(tree, num_features):
     elif node_type == 'leaf':
       assert node.metadata.gain == 0
     else:
-      raise ValueError('Unexpected split type %s' % node_type)
+      raise ValueError(f'Unexpected split type {node_type}')
 
   return importances
 
@@ -1668,14 +1661,9 @@ def _bt_explanations_fn(features,
 
     # pylint: disable=protected-access
     float_columns = _get_float_feature_columns(sorted_feature_columns)
-    num_float_features = _calculate_num_features(float_columns)
-    # pylint: enable=protected-access
-    num_quantiles = int(1. / quantile_sketch_epsilon)
-    if not num_float_features:
-      input_feature_list = _get_transformed_features(features,
-                                                     sorted_feature_columns)
-    # Create Quantile accumulator resource.
-    else:
+    if num_float_features := _calculate_num_features(float_columns):
+      # pylint: enable=protected-access
+      num_quantiles = int(1. / quantile_sketch_epsilon)
       quantile_accumulator = boosted_trees_ops.QuantileAccumulator(
           epsilon=quantile_sketch_epsilon,
           num_streams=num_float_features,
@@ -1687,6 +1675,9 @@ def _bt_explanations_fn(features,
       input_feature_list = _get_transformed_features(features,
                                                      sorted_feature_columns,
                                                      bucket_boundaries_dict)
+    else:
+      input_feature_list = _get_transformed_features(features,
+                                                     sorted_feature_columns)
     logits = boosted_trees_ops.predict(
         # For non-TRAIN mode, ensemble doesn't change after initialization,
         # so no local copy is needed; using tree_ensemble directly.
@@ -1918,13 +1909,11 @@ def _validate_input_params(tree_params):
               'quantile_sketch_epsilon')
   for p in positive:
     if getattr(tree_params, p) <= 0:
-      raise ValueError('Expected {} > 0, received: {}'.format(
-          p, getattr(tree_params, p)))
+      raise ValueError(f'Expected {p} > 0, received: {getattr(tree_params, p)}')
   non_negative = ('l1', 'l2', 'tree_complexity', 'min_node_weight')
   for p in non_negative:
     if getattr(tree_params, p) < 0:
-      raise ValueError('Expected {} >= 0, received: {}'.format(
-          p, getattr(tree_params, p)))
+      raise ValueError(f'Expected {p} >= 0, received: {getattr(tree_params, p)}')
 
 
 # pylint: disable=protected-access

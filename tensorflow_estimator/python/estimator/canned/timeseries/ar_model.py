@@ -366,15 +366,14 @@ class ARModel(model.TimeSeriesModel):
   def _process_exogenous_features(self, times, features):
     embedded = super(ARModel, self)._process_exogenous_features(
         times=times, features=features)
-    if embedded is None:
-      assert self.exogenous_size == 0
-      # No embeddings. Return a zero-size [batch, times, 0] array so we don't
-      # have to special case it downstream.
-      return tf.zeros(
-          tf.concat([tf.compat.v1.shape(times),
-                     tf.constant([0])], axis=0))
-    else:
+    if embedded is not None:
       return embedded
+    assert self.exogenous_size == 0
+    # No embeddings. Return a zero-size [batch, times, 0] array so we don't
+    # have to special case it downstream.
+    return tf.zeros(
+        tf.concat([tf.compat.v1.shape(times),
+                   tf.constant([0])], axis=0))
 
   # TODO(allenl, agarwal): Consider better ways of warm-starting predictions.
   def predict(self, features):

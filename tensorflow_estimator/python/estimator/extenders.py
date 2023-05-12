@@ -14,6 +14,7 @@
 # ==============================================================================
 """Extenders of tf.estimator.Estimator."""
 
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -23,7 +24,7 @@ from tensorflow.python.util.tf_export import estimator_export
 from tensorflow_estimator.python.estimator import estimator as estimator_lib
 from tensorflow_estimator.python.estimator.mode_keys import ModeKeys
 
-_VALID_METRIC_FN_ARGS = set(['features', 'labels', 'predictions', 'config'])
+_VALID_METRIC_FN_ARGS = {'features', 'labels', 'predictions', 'config'}
 
 
 @estimator_export('estimator.add_metrics')
@@ -102,10 +103,10 @@ def add_metrics(estimator, metric_fn):
 
 def _verify_metric_fn_args(metric_fn):
   args = set(function_utils.fn_args(metric_fn))
-  invalid_args = list(args - _VALID_METRIC_FN_ARGS)
-  if invalid_args:
-    raise ValueError('metric_fn (%s) has following not expected args: %s' %
-                     (metric_fn, invalid_args))
+  if invalid_args := list(args - _VALID_METRIC_FN_ARGS):
+    raise ValueError(
+        f'metric_fn ({metric_fn}) has following not expected args: {invalid_args}'
+    )
 
 
 def _call_metric_fn(metric_fn, features, labels, predictions, config):

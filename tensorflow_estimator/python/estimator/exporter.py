@@ -107,14 +107,13 @@ class _SavedModelExporter(Exporter):
              is_the_final_export):
     del is_the_final_export
 
-    export_result = estimator.export_saved_model(
+    return estimator.export_saved_model(
         export_path,
         self._serving_input_receiver_fn,
         assets_extra=self._assets_extra,
         as_text=self._as_text,
-        checkpoint_path=checkpoint_path)
-
-    return export_result
+        checkpoint_path=checkpoint_path,
+    )
 
 
 def _loss_smaller(best_eval_result, current_eval_result):
@@ -149,16 +148,17 @@ def _verify_compare_fn_args(compare_fn):
   """Verifies compare_fn arguments."""
   args = set(util.fn_args(compare_fn))
   if 'best_eval_result' not in args:
-    raise ValueError('compare_fn (%s) must include best_eval_result argument.' %
-                     compare_fn)
+    raise ValueError(
+        f'compare_fn ({compare_fn}) must include best_eval_result argument.')
   if 'current_eval_result' not in args:
     raise ValueError(
-        'compare_fn (%s) must include current_eval_result argument.' %
-        compare_fn)
-  non_valid_args = list(args - set(['best_eval_result', 'current_eval_result']))
-  if non_valid_args:
-    raise ValueError('compare_fn (%s) has following not expected args: %s' %
-                     (compare_fn, non_valid_args))
+        f'compare_fn ({compare_fn}) must include current_eval_result argument.'
+    )
+  if non_valid_args := list(args -
+                            {'best_eval_result', 'current_eval_result'}):
+    raise ValueError(
+        f'compare_fn ({compare_fn}) has following not expected args: {non_valid_args}'
+    )
 
 
 @estimator_export('estimator.BestExporter')
@@ -269,8 +269,8 @@ class BestExporter(Exporter):
     self._exports_to_keep = exports_to_keep
     if exports_to_keep is not None and exports_to_keep <= 0:
       raise ValueError(
-          '`exports_to_keep`, if provided, must be a positive number. Got %s' %
-          exports_to_keep)
+          f'`exports_to_keep`, if provided, must be a positive number. Got {exports_to_keep}'
+      )
 
   @property
   def name(self):
@@ -354,14 +354,13 @@ class BestExporter(Exporter):
     for event_file in tf.compat.v1.gfile.Glob(os.path.join(event_files)):
       for event in tf.compat.v1.train.summary_iterator(event_file):
         if event.HasField('summary'):
-          event_eval_result = {}
-          for value in event.summary.value:
-            if value.HasField('simple_value'):
-              event_eval_result[value.tag] = value.simple_value
-          if event_eval_result:
-            if best_eval_result is None or self._compare_fn(
-                best_eval_result, event_eval_result):
-              best_eval_result = event_eval_result
+          event_eval_result = {
+              value.tag: value.simple_value
+              for value in event.summary.value if value.HasField('simple_value')
+          }
+          if event_eval_result and (best_eval_result is None or self._compare_fn(
+              best_eval_result, event_eval_result)):
+            best_eval_result = event_eval_result
     return best_eval_result
 
 

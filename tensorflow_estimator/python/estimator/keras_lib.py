@@ -263,26 +263,21 @@ def _convert_keras_metrics_to_estimator(model, metric_names_map=None):
   # added using `add_metric` API.
   compiled_metrics = model._compile_metric_functions
 
-  if metric_names_map:
-    custom_map_keys = set(metric_names_map.keys())
-    expected_keys = {m.name for m in compiled_metrics}
-    unknown = expected_keys.difference(custom_map_keys)
-    if unknown:
-      raise ValueError(
-          'Invalid `metric_names_map`. '
-          'The following keras model metric names:"{}" do not exist in '
-          'the `metric_names_map` dictionary'.format(list(unknown)))
-
-    extra = custom_map_keys.difference(expected_keys)
-    if extra:
-      raise ValueError('Invalid `metric_names_map`. '
-                       'There are unexpected keys in the `metric_names_map` '
-                       'dictionary. Expected keys: {}, Received: {}'.format(
-                           list(expected_keys), list(extra)))
-
-    return {metric_names_map[m.name]: m for m in compiled_metrics}
-  else:
+  if not metric_names_map:
     return {m.name: m for m in compiled_metrics}
+  custom_map_keys = set(metric_names_map.keys())
+  expected_keys = {m.name for m in compiled_metrics}
+  if unknown := expected_keys.difference(custom_map_keys):
+    raise ValueError(
+        f'Invalid `metric_names_map`. The following keras model metric names:"{list(unknown)}" do not exist in the `metric_names_map` dictionary'
+    )
+
+  if extra := custom_map_keys.difference(expected_keys):
+    raise ValueError(
+        f'Invalid `metric_names_map`. There are unexpected keys in the `metric_names_map` dictionary. Expected keys: {list(expected_keys)}, Received: {list(extra)}'
+    )
+
+  return {metric_names_map[m.name]: m for m in compiled_metrics}
 
 
 def _create_keras_model_fn(keras_model,
@@ -500,7 +495,7 @@ def _get_file_from_google_storage(keras_model_path, model_dir):
     raise ValueError('Failed to download keras model, please check '
                      'environment variable GOOGLE_APPLICATION_CREDENTIALS '
                      'and model path storage.googleapis.com/{bucket}/{object}.')
-  tf.compat.v1.logging.info('Saving model to {}'.format(file_name))
+  tf.compat.v1.logging.info(f'Saving model to {file_name}')
   del storage_client
   return file_name
 
@@ -678,8 +673,8 @@ def model_to_estimator(keras_model=None,
     save_object_ckpt = False
   else:
     raise ValueError(
-        'Checkpoint format must be one of "checkpoint" or "saver". Got {}'
-        .format(checkpoint_format))
+        f'Checkpoint format must be one of "checkpoint" or "saver". Got {checkpoint_format}'
+    )
 
   if not hasattr(keras_model, 'optimizer') or not keras_model.optimizer:
     raise ValueError('The given keras model has not been compiled yet. '
@@ -722,10 +717,9 @@ def model_to_estimator(keras_model=None,
   else:
     estimator_cls = estimator_lib.Estimator
 
-  estimator = estimator_cls(
-      keras_model_fn, config=config, warm_start_from=warm_start_path)
-
-  return estimator
+  return estimator_cls(keras_model_fn,
+                       config=config,
+                       warm_start_from=warm_start_path)
 
 
 def _assert_valid_model(model, custom_objects=None):
@@ -768,24 +762,16 @@ def standardize_sample_weights(x_weight, output_names):
       return [x_weight]
   if isinstance(x_weight, (list, tuple)):
     if len(x_weight) != len(output_names):
-      raise ValueError('Provided `sample_weights` was a list of ' +
-                       str(len(x_weight)) + ' elements, but the model has ' +
-                       str(len(output_names)) + ' outputs. '
-                       'You should provide one `sample_weights`'
-                       'array per model output.')
+      raise ValueError(
+          f'Provided `sample_weights` was a list of {len(x_weight)} elements, but the model has {len(output_names)} outputs. You should provide one `sample_weights`array per model output.'
+      )
     return x_weight
-  if isinstance(x_weight, collections.abc.Mapping):
-    unknown = set(x_weight.keys()).difference(output_names)
-    if unknown:
-      raise ValueError('Unknown entries in sample_weights dictionary: {}. '
-                       'Only expected following keys: {}'.format(
-                           list(unknown), output_names))
-    x_weights = []
-    for name in output_names:
-      x_weights.append(x_weight.get(name))
-    return x_weights
-  else:
-    raise TypeError('The model has multiple outputs, so `sample_weights` '
-                    'should be either a list or a dict. '
-                    'Provided `sample_weights` type not understood: ' +
-                    str(x_weight))
+  if not isinstance(x_weight, collections.abc.Mapping):
+    raise TypeError(
+        f'The model has multiple outputs, so `sample_weights` should be either a list or a dict. Provided `sample_weights` type not understood: {str(x_weight)}'
+    )
+  if unknown := set(x_weight.keys()).difference(output_names):
+    raise ValueError(
+        f'Unknown entries in sample_weights dictionary: {list(unknown)}. Only expected following keys: {output_names}'
+    )
+  return [x_weight.get(name) for name in output_names]

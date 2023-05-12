@@ -94,10 +94,7 @@ class BoostedTreesDFCTest(tf.test.TestCase):
         (expected_dfcs_identity, expected_dfcs_sigmoid)):
       for center_bias in [False, True]:
         # If not center_bias, the bias after activation is 0.
-        if center_bias:
-          bias_logit = 0.21  # Root node of tree_0.
-        else:
-          bias_logit = 0  # 0 is default value when there is no original_leaf.
+        bias_logit = 0.21 if center_bias else 0
         f_bias = f(bias_logit)
 
         # Logits before and after, as is outputed from

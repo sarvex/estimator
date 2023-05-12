@@ -932,11 +932,10 @@ class DNNLinearCombinedTests(tf.test.TestCase):
       trainable_vars = var_list or tf.compat.v1.get_collection(
           tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES)
       var_names = [var.name for var in trainable_vars]
-      self.assertTrue(
-          all([name.startswith(var_name_prefix) for name in var_names]))
+      self.assertTrue(all(name.startswith(var_name_prefix) for name in var_names))
       # var is used to check this op called by training.
       with ops.name_scope(''):
-        var = tf.Variable(0., name=(var_name_prefix + '_called'))
+        var = tf.Variable(0., name=f'{var_name_prefix}_called')
       with tf.control_dependencies([var.assign(100.)]):
         return real_optimizer.minimize(loss, global_step, var_list)
 

@@ -702,8 +702,8 @@ class MultiClassHeadWithSoftmaxCrossEntropyLoss(tf.test.TestCase):
         features=features, mode=ModeKeys.EVAL, logits=logits, labels=labels)
 
     expected_metric_keys = [
-        '{}/some_multiclass_head'.format(metric_keys.MetricKeys.LOSS_MEAN),
-        '{}/some_multiclass_head'.format(metric_keys.MetricKeys.ACCURACY)
+        f'{metric_keys.MetricKeys.LOSS_MEAN}/some_multiclass_head',
+        f'{metric_keys.MetricKeys.ACCURACY}/some_multiclass_head',
     ]
     self.assertItemsEqual(expected_metric_keys, spec.eval_metric_ops.keys())
 
@@ -1820,15 +1820,15 @@ class BinaryLogisticHeadWithSigmoidCrossEntropyLossTest(tf.test.TestCase):
         features=features, mode=ModeKeys.EVAL, logits=logits, labels=labels)
 
     expected_metric_keys = [
-        '{}/some_binary_head'.format(metric_keys.MetricKeys.LOSS_MEAN),
-        '{}/some_binary_head'.format(metric_keys.MetricKeys.ACCURACY),
-        '{}/some_binary_head'.format(metric_keys.MetricKeys.PRECISION),
-        '{}/some_binary_head'.format(metric_keys.MetricKeys.RECALL),
-        '{}/some_binary_head'.format(metric_keys.MetricKeys.PREDICTION_MEAN),
-        '{}/some_binary_head'.format(metric_keys.MetricKeys.LABEL_MEAN),
-        '{}/some_binary_head'.format(metric_keys.MetricKeys.ACCURACY_BASELINE),
-        '{}/some_binary_head'.format(metric_keys.MetricKeys.AUC),
-        '{}/some_binary_head'.format(metric_keys.MetricKeys.AUC_PR),
+        f'{metric_keys.MetricKeys.LOSS_MEAN}/some_binary_head',
+        f'{metric_keys.MetricKeys.ACCURACY}/some_binary_head',
+        f'{metric_keys.MetricKeys.PRECISION}/some_binary_head',
+        f'{metric_keys.MetricKeys.RECALL}/some_binary_head',
+        f'{metric_keys.MetricKeys.PREDICTION_MEAN}/some_binary_head',
+        f'{metric_keys.MetricKeys.LABEL_MEAN}/some_binary_head',
+        f'{metric_keys.MetricKeys.ACCURACY_BASELINE}/some_binary_head',
+        f'{metric_keys.MetricKeys.AUC}/some_binary_head',
+        f'{metric_keys.MetricKeys.AUC_PR}/some_binary_head',
     ]
     self.assertItemsEqual(expected_metric_keys, spec.eval_metric_ops.keys())
 
@@ -3204,10 +3204,9 @@ class RegressionHead(tf.test.TestCase):
         features=features, mode=ModeKeys.EVAL, logits=logits, labels=labels)
 
     expected_metric_keys = [
-        '{}/some_regression_head'.format(metric_keys.MetricKeys.LOSS_MEAN),
-        '{}/some_regression_head'.format(
-            metric_keys.MetricKeys.PREDICTION_MEAN),
-        '{}/some_regression_head'.format(metric_keys.MetricKeys.LABEL_MEAN),
+        f'{metric_keys.MetricKeys.LOSS_MEAN}/some_regression_head',
+        f'{metric_keys.MetricKeys.PREDICTION_MEAN}/some_regression_head',
+        f'{metric_keys.MetricKeys.LABEL_MEAN}/some_regression_head',
     ]
     self.assertItemsEqual(expected_metric_keys, spec.eval_metric_ops.keys())
 
@@ -3941,14 +3940,13 @@ class RegressionHead(tf.test.TestCase):
 
       # Run tensors for `steps` steps.
       steps = len(logits)
-      results = tuple([
+      results = tuple(
           sess.run((
               spec.loss,
               # The `[1]` gives us the metric update op.
               {k: spec.eval_metric_ops[k][1]
-               for k in spec.eval_metric_ops}))
-          for _ in range(steps)
-      ])
+               for k in spec.eval_metric_ops},
+          )) for _ in range(steps))
 
       # Assert losses and metrics.
       self.assertAllClose((100, .1, 1.5), [r[0] for r in results])
@@ -3999,7 +3997,7 @@ class RegressionHead(tf.test.TestCase):
       tf.compat.v1.train.queue_runner.start_queue_runners()
 
       results = tuple(
-          [sess.run((spec.loss, spec.train_op)) for _ in range(len(logits))])
+          sess.run((spec.loss, spec.train_op)) for _ in range(len(logits)))
 
       # losses = [1*(35-45)^2, .1*(42-41)^2, 1.5*(45-44)^2] = [100, .1, 1.5]
       expected_losses = np.array((100, .1, 1.5))

@@ -456,15 +456,15 @@ class BinaryClassHeadTest(tf.test.TestCase):
     features = {'x': np.array(((42,),), dtype=np.int32)}
     keys = metric_keys.MetricKeys
     expected_metric_keys = [
-        '{}/some_binary_head'.format(keys.LOSS_MEAN),
-        '{}/some_binary_head'.format(keys.ACCURACY),
-        '{}/some_binary_head'.format(keys.PRECISION),
-        '{}/some_binary_head'.format(keys.RECALL),
-        '{}/some_binary_head'.format(keys.PREDICTION_MEAN),
-        '{}/some_binary_head'.format(keys.LABEL_MEAN),
-        '{}/some_binary_head'.format(keys.ACCURACY_BASELINE),
-        '{}/some_binary_head'.format(keys.AUC),
-        '{}/some_binary_head'.format(keys.AUC_PR),
+        f'{keys.LOSS_MEAN}/some_binary_head',
+        f'{keys.ACCURACY}/some_binary_head',
+        f'{keys.PRECISION}/some_binary_head',
+        f'{keys.RECALL}/some_binary_head',
+        f'{keys.PREDICTION_MEAN}/some_binary_head',
+        f'{keys.LABEL_MEAN}/some_binary_head',
+        f'{keys.ACCURACY_BASELINE}/some_binary_head',
+        f'{keys.AUC}/some_binary_head',
+        f'{keys.AUC_PR}/some_binary_head',
     ]
     eval_metrics = head.metrics()
     updated_metrics = head.update_metrics(eval_metrics, features, logits,
@@ -1432,6 +1432,8 @@ class BinaryClassHeadForEstimator(tf.test.TestCase):
   def test_invalid_trainable_variables(self):
     head = head_lib.BinaryClassHead()
 
+
+
     class _Optimizer(tf.keras.optimizers.Optimizer):
 
       def get_updates(self, loss, params):
@@ -1444,8 +1446,8 @@ class BinaryClassHeadForEstimator(tf.test.TestCase):
         ]
 
       def get_config(self):
-        config = super(_Optimizer, self).get_config()
-        return config
+        return super(_Optimizer, self).get_config()
+
 
     with self.assertRaisesRegexp(ValueError,
                                  r'trainable_variables cannot be None'):
@@ -1479,6 +1481,8 @@ class BinaryClassHeadForEstimator(tf.test.TestCase):
     #      = sum(0, 41) / 2 = 41 / 2 = 20.5
     expected_loss = 20.5
 
+
+
     class _Optimizer(tf.keras.optimizers.Optimizer):
 
       def get_updates(self, loss, params):
@@ -1490,8 +1494,8 @@ class BinaryClassHeadForEstimator(tf.test.TestCase):
           return [tf.constant(expected_train_result)]
 
       def get_config(self):
-        config = super(_Optimizer, self).get_config()
-        return config
+        return super(_Optimizer, self).get_config()
+
 
     # Create estimator spec.
     spec = head.create_estimator_spec(

@@ -68,21 +68,19 @@ class _OverridableStateManager(PassthroughStateManager):
 
   def define_loss(self, model, features, mode):
     """Switches between explicit start state and managed state."""
-    if feature_keys.FilteringFeatures.STATE_TUPLE in features:
-      # Explicit start state has been provided, so we should use that.
-      if mode == estimator_lib.ModeKeys.TRAIN:
-        raise ValueError(
-            "Overriding saved state for training is not supported (but a value "
-            "for feature {} was specified).".format(
-                feature_keys.FilteringFeatures.STATE_TUPLE))
-      start_state = features[feature_keys.FilteringFeatures.STATE_TUPLE]
-      del features[feature_keys.FilteringFeatures.STATE_TUPLE]
-      return model.get_batch_loss(
-          features=features, mode=mode, state=start_state)
-    else:
+    if feature_keys.FilteringFeatures.STATE_TUPLE not in features:
       # No explicit start state; use managed state.
       return self._define_loss_with_saved_state(
           model=model, features=features, mode=mode)
+      # Explicit start state has been provided, so we should use that.
+    if mode == estimator_lib.ModeKeys.TRAIN:
+      raise ValueError(
+          f"Overriding saved state for training is not supported (but a value for feature {feature_keys.FilteringFeatures.STATE_TUPLE} was specified)."
+      )
+    start_state = features[feature_keys.FilteringFeatures.STATE_TUPLE]
+    del features[feature_keys.FilteringFeatures.STATE_TUPLE]
+    return model.get_batch_loss(
+        features=features, mode=mode, state=start_state)
 
 
 class FilteringOnlyStateManager(_OverridableStateManager):

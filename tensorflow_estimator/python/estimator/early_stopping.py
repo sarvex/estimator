@@ -74,8 +74,9 @@ def make_early_stopping_hook(estimator,
     ValueError: If both `run_every_secs` and `run_every_steps` are set.
   """
   if not isinstance(estimator, estimator_lib.Estimator):
-    raise TypeError('`estimator` must have type `tf.estimator.Estimator`. '
-                    'Got: {}'.format(type(estimator)))
+    raise TypeError(
+        f'`estimator` must have type `tf.estimator.Estimator`. Got: {type(estimator)}'
+    )
 
   if run_every_secs is not None and run_every_steps is not None:
     raise ValueError('Only one of `run_every_secs` and `run_every_steps` must '
@@ -339,11 +340,10 @@ def read_eval_metrics(eval_dir):
   for event in _summaries(eval_dir):
     if not event.HasField('summary'):
       continue
-    metrics = {}
-    for value in event.summary.value:
-      if value.HasField('simple_value'):
-        metrics[value.tag] = value.simple_value
-    if metrics:
+    if metrics := {
+        value.tag: value.simple_value
+        for value in event.summary.value if value.HasField('simple_value')
+    }:
       eval_metrics_dict[event.step].update(metrics)
   return collections.OrderedDict(
       sorted(eval_metrics_dict.items(), key=lambda t: t[0]))
@@ -439,8 +439,7 @@ def _summaries(eval_dir):
     for event_file in tf.compat.v1.gfile.Glob(
         os.path.join(eval_dir, _EVENT_FILE_GLOB_PATTERN)):
       try:
-        for event in tf.compat.v1.train.summary_iterator(event_file):
-          yield event
+        yield from tf.compat.v1.train.summary_iterator(event_file)
       except tf.errors.DataLossError as e:
         # Upon DataLossError, we ignore the rest of the file and go to the next
         # one.

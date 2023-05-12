@@ -46,7 +46,7 @@ _TRAINER_JOBS = (run_config_lib.TaskType.CHIEF, run_config_lib.TaskType.MASTER,
 def _validate_input_fn(input_fn):
   """Validates the `input_fn`."""
   if not callable(input_fn):
-    raise TypeError('`input_fn` must be callable, given: {}'.format(input_fn))
+    raise TypeError(f'`input_fn` must be callable, given: {input_fn}')
 
 
 def _validate_hooks(hooks):
@@ -54,9 +54,7 @@ def _validate_hooks(hooks):
   hooks = tuple(hooks or [])
   for hook in hooks:
     if not isinstance(hook, tf.compat.v1.train.SessionRunHook):
-      raise TypeError(
-          'All hooks must be `SessionRunHook` instances, given: {}'.format(
-              hook))
+      raise TypeError(f'All hooks must be `SessionRunHook` instances, given: {hook}')
   return hooks
 
 
@@ -67,8 +65,8 @@ def _validate_saving_listeners(saving_listeners):
     if not isinstance(saving_listener,
                       tf.compat.v1.train.CheckpointSaverListener):
       raise TypeError(
-          'All saving_listeners must be `CheckpointSaverListener` instances, '
-          'given: {}'.format(saving_listener))
+          f'All saving_listeners must be `CheckpointSaverListener` instances, given: {saving_listener}'
+      )
   return saving_listeners
 
 
@@ -89,19 +87,20 @@ def _validate_exporters(exporters):
 
       if not exporter.name:
         full_list_of_names = [e.name for e in exporters]
-        raise ValueError('An Exporter cannot have a name that is `None` or'
-                         ' empty. All exporter names:'
-                         ' {}'.format(full_list_of_names))
+        raise ValueError(
+            f'An Exporter cannot have a name that is `None` or empty. All exporter names: {full_list_of_names}'
+        )
 
       if not isinstance(exporter.name, six.string_types):
-        raise ValueError('An Exporter must have a string name. Given: '
-                         '{}'.format(type(exporter.name)))
+        raise ValueError(
+            f'An Exporter must have a string name. Given: {type(exporter.name)}'
+        )
 
       if exporter.name in unique_names:
         full_list_of_names = [e.name for e in exporters]
         raise ValueError(
-            '`exporters` must have unique names. Such a name cannot be `None`.'
-            ' All exporter names: {}'.format(full_list_of_names))
+            f'`exporters` must have unique names. Such a name cannot be `None`. All exporter names: {full_list_of_names}'
+        )
       unique_names.append(exporter.name)
   except TypeError:
     # Two possibilities:
@@ -184,8 +183,7 @@ class TrainSpec(
 
     # Validate max_steps.
     if max_steps is not None and max_steps <= 0:
-      raise ValueError(
-          'Must specify max_steps > 0, given: {}'.format(max_steps))
+      raise ValueError(f'Must specify max_steps > 0, given: {max_steps}')
 
     # Validate hooks.
     hooks = _validate_hooks(hooks)
@@ -261,11 +259,11 @@ class EvalSpec(
 
     # Validate steps.
     if steps is not None and steps <= 0:
-      raise ValueError('Must specify steps > 0, given: {}'.format(steps))
+      raise ValueError(f'Must specify steps > 0, given: {steps}')
 
     # Validate name.
     if name is not None and not isinstance(name, six.string_types):
-      raise TypeError('`name` must be string, given: {}'.format(name))
+      raise TypeError(f'`name` must be string, given: {name}')
 
     # Validate hooks.
     hooks = _validate_hooks(hooks)
@@ -275,13 +273,12 @@ class EvalSpec(
 
     # Validate start_delay_secs.
     if start_delay_secs < 0:
-      raise ValueError('Must specify start_delay_secs >= 0, given: {}'.format(
-          start_delay_secs))
+      raise ValueError(
+          f'Must specify start_delay_secs >= 0, given: {start_delay_secs}')
 
     # Validate throttle_secs.
     if throttle_secs < 0:
-      raise ValueError(
-          'Must specify throttle_secs >= 0, given: {}'.format(throttle_secs))
+      raise ValueError(f'Must specify throttle_secs >= 0, given: {throttle_secs}')
 
     return super(EvalSpec, cls).__new__(
         cls,
@@ -498,8 +495,8 @@ def train_and_evaluate(estimator, train_spec, eval_spec):
   if (config.task_type == run_config_lib.TaskType.EVALUATOR and
       config.task_id > 0):
     raise ValueError(
-        'For distributed training, there can only be one `evaluator` task '
-        '(with task id 0).  Given task id {}'.format(config.task_id))
+        f'For distributed training, there can only be one `evaluator` task (with task id 0).  Given task id {config.task_id}'
+    )
 
   return executor.run()
 
@@ -556,15 +553,15 @@ class _NewCheckpointListenerForEvaluate(
     else:
       # TODO(ispir): add remaining time in the log.
       tf.compat.v1.logging.info(
-          'Skip the current checkpoint eval due to throttle secs '
-          '({} secs).'.format(self._eval_throttle_secs))
+          f'Skip the current checkpoint eval due to throttle secs ({self._eval_throttle_secs} secs).'
+      )
 
   def end(self, session, global_step_value):
     # Evaluate if the last step has not been evaluated, yet.
-    if global_step_value != self._timer.last_triggered_step():
-      if self._continuous_eval_listener.before_eval():
-        self._evaluate(global_step_value)
-        self._continuous_eval_listener.after_eval(self.eval_result)
+    if (global_step_value != self._timer.last_triggered_step()
+        and self._continuous_eval_listener.before_eval()):
+      self._evaluate(global_step_value)
+      self._continuous_eval_listener.after_eval(self.eval_result)
 
   def _evaluate(self, global_step_value):
     self._timer.update_last_triggered_step(global_step_value)
@@ -573,8 +570,9 @@ class _NewCheckpointListenerForEvaluate(
     if self.eval_result.status != _EvalStatus.EVALUATED:
       #  This is unexpected; should never happen.
       #  Training should always end with a new checkpoint.
-      raise RuntimeError('There was no new checkpoint after the training. '
-                         'Eval status: {}'.format(self.eval_result.status))
+      raise RuntimeError(
+          f'There was no new checkpoint after the training. Eval status: {self.eval_result.status}'
+      )
 
 
 class _TrainingExecutor(object):
@@ -592,19 +590,21 @@ class _TrainingExecutor(object):
                continuous_eval_listener=None):
     if not isinstance(estimator,
                       (estimator_lib.Estimator, estimator_lib.EstimatorV2)):
-      raise TypeError('`estimator` must have type `tf.estimator.Estimator`. '
-                      'Got: {}'.format(type(estimator)))
+      raise TypeError(
+          f'`estimator` must have type `tf.estimator.Estimator`. Got: {type(estimator)}'
+      )
     self._estimator = estimator
 
     if not isinstance(train_spec, TrainSpec):
-      raise TypeError('`train_spec` must have type `tf.estimator.TrainSpec`. '
-                      'Got: {}'.format(type(train_spec)))
+      raise TypeError(
+          f'`train_spec` must have type `tf.estimator.TrainSpec`. Got: {type(train_spec)}'
+      )
     self._train_spec = train_spec
 
     if eval_spec and not isinstance(eval_spec, EvalSpec):
-      raise TypeError('`eval_spec` must be either `None` or have type '
-                      '`tf.estimator.EvalSpec`. Got: {}'.format(
-                          type(eval_spec)))
+      raise TypeError(
+          f'`eval_spec` must be either `None` or have type `tf.estimator.EvalSpec`. Got: {type(eval_spec)}'
+      )
     self._eval_spec = eval_spec
 
     self._train_hooks = _validate_hooks(train_hooks)
@@ -663,11 +663,11 @@ class _TrainingExecutor(object):
         x for x in dir(self) if x.startswith('run_') and x != 'run_local' and
         callable(getattr(self, x))
     ]
-    task_to_run = 'run_' + config.task_type
+    task_to_run = f'run_{config.task_type}'
     if task_to_run not in available_tasks:
       raise ValueError(
-          'Task type {} is not supported. Supported task types are {}'.format(
-              config.task_type, [x[len('run_'):] for x in available_tasks]))
+          f"Task type {config.task_type} is not supported. Supported task types are {[x[len('run_'):] for x in available_tasks]}"
+      )
     getattr(self, task_to_run)()
 
   def run_chief(self):
@@ -701,10 +701,10 @@ class _TrainingExecutor(object):
 
     # When the underlying `Estimator` object saves a new checkpoint, we would
     # like this callback to be called so that evaluation and export can trigger.
-    saving_listeners = self._train_spec.saving_listeners + tuple(
-        [_NewCheckpointListenerForEvaluate(evaluator,
-                                           self._eval_spec.throttle_secs,
-                                           _ContinuousEvalListener())])
+    saving_listeners = self._train_spec.saving_listeners + (
+        _NewCheckpointListenerForEvaluate(evaluator,
+                                          self._eval_spec.throttle_secs,
+                                          _ContinuousEvalListener()), )
     self._start_distributed_training(saving_listeners=saving_listeners)
 
   def run_evaluator(self):
@@ -724,12 +724,8 @@ class _TrainingExecutor(object):
 
     train_hooks = list(self._train_spec.hooks) + list(self._train_hooks)
     tf.compat.v1.logging.info(
-        'Start train and evaluate loop. The evaluate will happen '
-        'after every checkpoint. Checkpoint frequency is determined '
-        'based on RunConfig arguments: save_checkpoints_steps {} or '
-        'save_checkpoints_secs {}.'.format(
-            self._estimator.config.save_checkpoints_steps,
-            self._estimator.config.save_checkpoints_secs))
+        f'Start train and evaluate loop. The evaluate will happen after every checkpoint. Checkpoint frequency is determined based on RunConfig arguments: save_checkpoints_steps {self._estimator.config.save_checkpoints_steps} or save_checkpoints_secs {self._estimator.config.save_checkpoints_secs}.'
+    )
 
     evaluator = _TrainingExecutor._Evaluator(self._estimator, self._eval_spec,
                                              self._train_spec.max_steps)
@@ -759,21 +755,19 @@ class _TrainingExecutor(object):
 
     if not config.master:
       jobs = config.cluster_spec.jobs
-      if (len(jobs) == 1 and
-          len(config.cluster_spec.job_tasks(jobs[0])) == 1 and
-          config.task_type in _TRAINER_JOBS):
-        # For distributed training, config.master is empty if and only if it has
-        # a single node in the cluster spec. In this case, we should not start
-        # the server.
-        tf.compat.v1.logging.info(
-            'Skip starting Tensorflow server as there is only one '
-            'node in the cluster.')
-        return
-      else:
+      if (len(jobs) != 1 or len(config.cluster_spec.job_tasks(jobs[0])) != 1
+          or config.task_type not in _TRAINER_JOBS):
         raise RuntimeError(
             'Could not start server; be sure to specify master in '
             'RunConfig or set the TF_CONFIG environment variable.')
 
+      # For distributed training, config.master is empty if and only if it has
+      # a single node in the cluster spec. In this case, we should not start
+      # the server.
+      tf.compat.v1.logging.info(
+          'Skip starting Tensorflow server as there is only one '
+          'node in the cluster.')
+      return
     tf.compat.v1.logging.info('Start Tensorflow server.')
 
     if config.session_config is None:
@@ -833,8 +827,7 @@ class _TrainingExecutor(object):
 
     _assert_eval_spec(self._eval_spec)
 
-    start_delay_secs = self._eval_spec.start_delay_secs
-    if start_delay_secs:
+    if start_delay_secs := self._eval_spec.start_delay_secs:
       tf.compat.v1.logging.info('Waiting %f secs before starting eval.',
                                 start_delay_secs)
       time.sleep(start_delay_secs)
@@ -987,18 +980,18 @@ class _TrainingExecutor(object):
           tf.compat.as_str_any(self._estimator.model_dir),
           tf.compat.as_str_any('export'))
 
-      export_results = []
-      for exporter in self._eval_spec.exporters:
-        export_results.append(
-            exporter.export(
-                estimator=self._estimator,
-                export_path=os.path.join(
-                    tf.compat.as_str_any(export_dir_base),
-                    tf.compat.as_str_any(exporter.name)),
-                checkpoint_path=eval_result.checkpoint_path,
-                eval_result=eval_result.metrics,
-                is_the_final_export=is_the_final_export))
-      return export_results
+      return [
+          exporter.export(
+              estimator=self._estimator,
+              export_path=os.path.join(
+                  tf.compat.as_str_any(export_dir_base),
+                  tf.compat.as_str_any(exporter.name),
+              ),
+              checkpoint_path=eval_result.checkpoint_path,
+              eval_result=eval_result.metrics,
+              is_the_final_export=is_the_final_export,
+          ) for exporter in self._eval_spec.exporters
+      ]
 
 
 class _EvalStatus(object):
@@ -1049,13 +1042,12 @@ class _EvalResult(
     if status != _EvalStatus.EVALUATED:
       if metrics:
         raise ValueError(
-            'metrics must be `None` if status is not {}; got status {},'
-            ' metrics {}'.format(_EvalStatus.EVALUATED, status, metrics))
+            f'metrics must be `None` if status is not {_EvalStatus.EVALUATED}; got status {status}, metrics {metrics}'
+        )
       if checkpoint_path:
         raise ValueError(
-            'checkpoint must be `None` if status is not {}; got status {}, '
-            'checkpoint_path {}'.format(_EvalStatus.EVALUATED, status,
-                                        checkpoint_path))
+            f'checkpoint must be `None` if status is not {_EvalStatus.EVALUATED}; got status {status}, checkpoint_path {checkpoint_path}'
+        )
       return super(_EvalResult, cls).__new__(cls, status, metrics,
                                              checkpoint_path)
 
@@ -1069,12 +1061,11 @@ class _EvalResult(
           'metrics.')
     if not isinstance(metrics, dict):
       raise TypeError(
-          '`Estimator.evaluate` should return dict. Given {}.'.format(
-              type(metrics)))
+          f'`Estimator.evaluate` should return dict. Given {type(metrics)}.')
     if tf.compat.v1.GraphKeys.GLOBAL_STEP not in metrics:
       raise ValueError(
-          'Internal error: `Estimator.evaluate` result should have '
-          '`global_step` in result. Given {}'.format(metrics))
+          f'Internal error: `Estimator.evaluate` result should have `global_step` in result. Given {metrics}'
+      )
 
     # Validates checkpoint_path.
     if not checkpoint_path:
@@ -1113,5 +1104,6 @@ class _ContinuousEvalListener(object):
 def _assert_eval_spec(eval_spec):
   """Raise error if `eval_spec` is not of the right type."""
   if not isinstance(eval_spec, EvalSpec):
-    raise TypeError('`eval_spec` must have type `tf.estimator.EvalSpec`. '
-                    'Got: {}'.format(type(eval_spec)))
+    raise TypeError(
+        f'`eval_spec` must have type `tf.estimator.EvalSpec`. Got: {type(eval_spec)}'
+    )

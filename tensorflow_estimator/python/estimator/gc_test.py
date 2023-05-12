@@ -36,11 +36,11 @@ def _create_parser(base_dir):
           "^" + tf.compat.as_str_any(base_dir).replace("\\", "/") + "/(\\d+)$",
           tf.compat.as_str_any(path.path).replace("\\", "/"))
     else:
-      match = re.match("^" + tf.compat.as_str_any(base_dir) + "/(\\d+)$",
-                       tf.compat.as_str_any(path.path))
-    if not match:
-      return None
-    return path._replace(export_version=int(match.group(1)))
+      match = re.match(
+          f"^{tf.compat.as_str_any(base_dir)}" + "/(\\d+)$",
+          tf.compat.as_str_any(path.path),
+      )
+    return None if not match else path._replace(export_version=int(match[1]))
 
   return parser
 
@@ -99,9 +99,7 @@ class GcTest(tf.test.TestCase):
     self.assertEqual(one_of(paths), [gc.Path("/foo", 0), gc.Path("/foo", 5)])
 
   def testUnion(self):
-    paths = []
-    for i in xrange(10):
-      paths.append(gc.Path("/foo", i))
+    paths = [gc.Path("/foo", i) for i in xrange(10)]
     f = gc._union(gc._largest_export_versions(3), gc._mod_export_version(3))
     self.assertEqual(
         f(paths), [

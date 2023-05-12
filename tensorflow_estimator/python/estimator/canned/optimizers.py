@@ -75,13 +75,13 @@ def get_optimizer_instance(opt, learning_rate=None):
         raise ValueError('learning_rate must be specified when opt is string.')
       return _OPTIMIZER_CLS_NAMES[opt](learning_rate=learning_rate)
     raise ValueError(
-        'Unsupported optimizer name: {}. Supported names are: {}'.format(
-            opt, tuple(sorted(six.iterkeys(_OPTIMIZER_CLS_NAMES)))))
+        f'Unsupported optimizer name: {opt}. Supported names are: {tuple(sorted(six.iterkeys(_OPTIMIZER_CLS_NAMES)))}'
+    )
   if callable(opt):
     opt = opt()
   if not isinstance(opt, tf.compat.v1.train.Optimizer):
     raise ValueError(
-        'The given object is not an Optimizer instance. Given: {}'.format(opt))
+        f'The given object is not an Optimizer instance. Given: {opt}')
   return opt
 
 
@@ -129,12 +129,12 @@ def get_optimizer_instance_v2(opt, learning_rate=None):
           return _OPTIMIZER_CLS_NAMES_V2[opt](learning_rate=_LEARNING_RATE)
       return _OPTIMIZER_CLS_NAMES_V2[opt](learning_rate=learning_rate)
     raise ValueError(
-        'Unsupported optimizer name: {}. Supported names are: {}'.format(
-            opt, tuple(sorted(six.iterkeys(_OPTIMIZER_CLS_NAMES_V2)))))
+        f'Unsupported optimizer name: {opt}. Supported names are: {tuple(sorted(six.iterkeys(_OPTIMIZER_CLS_NAMES_V2)))}'
+    )
   if callable(opt):
     opt = opt()
   if not isinstance(opt, tf.keras.optimizers.Optimizer):
     raise ValueError(
-        'The given object is not a tf.keras.optimizers.Optimizer instance.'
-        ' Given: {}'.format(opt))
+        f'The given object is not a tf.keras.optimizers.Optimizer instance. Given: {opt}'
+    )
   return opt

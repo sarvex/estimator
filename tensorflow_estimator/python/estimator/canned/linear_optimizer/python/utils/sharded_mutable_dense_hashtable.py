@@ -132,8 +132,7 @@ class _MutableDenseHashTable(lookup_ops.LookupInterface):
     Returns:
       A scalar tensor containing the number of elements in this table.
     """
-    with ops.name_scope(name, "%s_Size" % self.name,
-                        [self.resource_handle]) as name:
+    with ops.name_scope(name, f"{self.name}_Size", [self.resource_handle]) as name:
       with ops.colocate_with(self.resource_handle):
         return gen_lookup_ops.lookup_table_size_v2(
             self.resource_handle, name=name)
@@ -155,8 +154,7 @@ class _MutableDenseHashTable(lookup_ops.LookupInterface):
     Raises:
       TypeError: when `keys` do not match the table data types.
     """
-    with ops.name_scope(name, "%s_lookup_table_find" % self.name,
-                        [self.resource_handle, keys]) as name:
+    with ops.name_scope(name, f"{self.name}_lookup_table_find", [self.resource_handle, keys]) as name:
       keys = ops.convert_to_tensor(keys, dtype=self._key_dtype, name="keys")
       with ops.colocate_with(self.resource_handle):
         values = gen_lookup_ops.lookup_table_find_v2(
@@ -181,8 +179,7 @@ class _MutableDenseHashTable(lookup_ops.LookupInterface):
       TypeError: when `keys` or `values` doesn't match the table data
         types.
     """
-    with ops.name_scope(name, "%s_lookup_table_insert" % self.name,
-                        [self.resource_handle, keys, values]) as name:
+    with ops.name_scope(name, f"{self.name}_lookup_table_insert", [self.resource_handle, keys, values]) as name:
       keys = ops.convert_to_tensor(keys, dtype=self._key_dtype, name="keys")
       values = ops.convert_to_tensor(
           values, dtype=self._value_dtype, name="values")
@@ -201,8 +198,7 @@ class _MutableDenseHashTable(lookup_ops.LookupInterface):
       A pair of tensors with the first tensor containing all keys and the
         second tensors containing all values in the table.
     """
-    with ops.name_scope(name, "%s_lookup_table_export_values" % self.name,
-                        [self.resource_handle]) as name:
+    with ops.name_scope(name, f"{self.name}_lookup_table_export_values", [self.resource_handle]) as name:
       with ops.colocate_with(self.resource_handle):
         exported_keys, exported_values = gen_lookup_ops.lookup_table_export_v2(
             self.resource_handle, self._key_dtype, self._value_dtype, name=name)
@@ -222,8 +218,8 @@ class _MutableDenseHashTable(lookup_ops.LookupInterface):
     def __init__(self, table, name):
       tensors = table.export()
       specs = [
-          BaseSaverBuilder.SaveSpec(tensors[0], "", name + "-keys"),
-          BaseSaverBuilder.SaveSpec(tensors[1], "", name + "-values")
+          BaseSaverBuilder.SaveSpec(tensors[0], "", f"{name}-keys"),
+          BaseSaverBuilder.SaveSpec(tensors[1], "", f"{name}-values"),
       ]
       # pylint: disable=protected-access
       super(_MutableDenseHashTable._Saveable, self).__init__(table, specs, name)
@@ -307,15 +303,16 @@ class _ShardedMutableDenseHashTable(object):
     return tf.cast(indices, tf.dtypes.int32)
 
   def _check_keys(self, keys):
-    if keys.get_shape().ndims != 1 and keys.get_shape().ndims != 2:
-      raise ValueError("Expected a vector or matrix for keys, got %s." %
-                       keys.get_shape())
+    if keys.get_shape().ndims not in [1, 2]:
+      raise ValueError(
+          f"Expected a vector or matrix for keys, got {keys.get_shape()}.")
 
   def lookup(self, keys, name=None):
     """Looks up `keys` in a table, outputs the corresponding values."""
     if keys.dtype.base_dtype != self._key_dtype:
-      raise TypeError("Signature mismatch. Keys must be dtype %s, got %s." %
-                      (self._key_dtype, keys.dtype))
+      raise TypeError(
+          f"Signature mismatch. Keys must be dtype {self._key_dtype}, got {keys.dtype}."
+      )
     self._check_keys(keys)
     num_shards = self._num_shards
     if num_shards == 1:

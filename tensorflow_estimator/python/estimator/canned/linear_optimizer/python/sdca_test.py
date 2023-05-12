@@ -471,8 +471,7 @@ class SDCARegressorTest(tf.test.TestCase):
           np.absolute(l1_reg_weights[var_name].flatten()))
       no_l1_reg_weights_norm += sum(
           np.absolute(no_l1_reg_weights[var_name].flatten()))
-      print('Var name: %s, value: %s' %
-            (var_name, no_l1_reg_weights[var_name].flatten()))
+      print(f'Var name: {var_name}, value: {no_l1_reg_weights[var_name].flatten()}')
     self.assertLess(l1_reg_weights_norm, no_l1_reg_weights_norm)
 
   def testBiasOnly(self):
@@ -533,8 +532,8 @@ class SDCARegressorTest(tf.test.TestCase):
       half = int(num_examples / 2)
       return {
           'example_id': tf.constant([str(x + 1) for x in range(num_examples)]),
-          'a': tf.constant([[1]] * int(half) + [[0]] * int(half)),
-          'b': tf.constant([[0]] * int(half) + [[1]] * int(half)),
+          'a': tf.constant([[1]] * half + [[0]] * half),
+          'b': tf.constant([[0]] * half + [[1]] * half),
       }, tf.constant([[x]
                       for x in [1, 0, 0, 1, 1, 0, 0, 0, 1, 0] * int(half / 10) +
                       [0, 1, 0, 0, 0, 0, 0, 0, 1, 0] * int(half / 10)])
@@ -589,10 +588,11 @@ class SDCARegressorTest(tf.test.TestCase):
       half = int(num_examples / 2)
       return {
           'example_id': tf.constant([str(x + 1) for x in range(num_examples)]),
-          'a': tf.constant([[1]] * int(half) + [[0]] * int(half)),
-          'b': tf.constant([[0]] * int(half) + [[1]] * int(half)),
-      }, tf.constant([[1 if x % 10 == 0 else 0] for x in range(half)] +
-                     [[-1 if x % 10 == 0 else 0] for x in range(half)])
+          'a': tf.constant([[1]] * half + [[0]] * half),
+          'b': tf.constant([[0]] * half + [[1]] * half),
+      }, tf.constant([[1 if x % 10 == 0 else 0]
+                      for x in range(half)] + [[-1 if x % 10 == 0 else 0]
+                                               for x in range(half)])
 
     optimizer = linear.LinearSDCA(
         example_id_column='example_id', symmetric_l2_regularization=0.1)

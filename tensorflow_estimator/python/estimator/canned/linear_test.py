@@ -184,7 +184,8 @@ class ComputeFractionOfZeroTest(tf.test.TestCase):
     sparsity = linear._compute_fraction_of_zero([ops.convert_to_tensor([])])
     self.assertTrue(
         self.evaluate(tf.math.is_nan(sparsity)),
-        'Expected sparsity=nan, got %s' % sparsity)
+        f'Expected sparsity=nan, got {sparsity}',
+    )
 
   def test_multiple_empty(self):
     sparsity = linear._compute_fraction_of_zero([
@@ -193,7 +194,8 @@ class ComputeFractionOfZeroTest(tf.test.TestCase):
     ])
     self.assertTrue(
         self.evaluate(tf.math.is_nan(sparsity)),
-        'Expected sparsity=nan, got %s' % sparsity)
+        f'Expected sparsity=nan, got {sparsity}',
+    )
 
   def test_some_empty(self):
     with self.test_session():

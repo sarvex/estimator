@@ -42,8 +42,8 @@ def make_example_proto(feature_dict, target, value=1.0):
   features.feature['target'].float_list.value.append(target)
 
   for key, values in feature_dict.items():
-    features.feature[key + '_indices'].int64_list.value.extend(values)
-    features.feature[key + '_values'].float_list.value.extend([value] *
+    features.feature[f'{key}_indices'].int64_list.value.extend(values)
+    features.feature[f'{key}_values'].float_list.value.extend([value] *
                                                               len(values))
 
   return e
@@ -127,10 +127,7 @@ def make_variable_dict(max_age, max_gender, num_shards=None, partitioned=False):
   partitioner = None
   if partitioned:
     partitioner = tf.compat.v1.fixed_size_partitioner(num_shards=2, axis=0)
-  with tf.compat.v1.variable_scope(
-      name_or_scope=('variables/shard_{}'.format(num_shards)
-                     if num_shards else 'variables'),
-      partitioner=partitioner):
+  with tf.compat.v1.variable_scope(name_or_scope=f'variables/shard_{num_shards}' if num_shards else 'variables', partitioner=partitioner):
     age_weights = tf.compat.v1.get_variable(
         name='age',
         initializer=tf.zeros([max_age + 1], dtype=tf.dtypes.float32))
@@ -333,11 +330,8 @@ class SdcaWithLogisticLossTest(_SDCAModelTest):
         # partitioned), while making gender a PartitionedVariable.
         age_weights = tf.compat.v1.Variable(
             tf.zeros([1], dtype=tf.dtypes.float32))
-        with tf.compat.v1.variable_scope(
-            name_or_scope=('variables/shard_{}'.format(num_shards)
-                           if num_shards else 'variables'),
-            partitioner=tf.compat.v1.fixed_size_partitioner(
-                num_shards=2, axis=0)):
+        with tf.compat.v1.variable_scope(name_or_scope=f'variables/shard_{num_shards}' if num_shards else 'variables', partitioner=tf.compat.v1.fixed_size_partitioner(
+                      num_shards=2, axis=0)):
           gender_weights = tf.compat.v1.get_variable(
               name='gender', initializer=tf.zeros([2], dtype=tf.dtypes.float32))
         variables = dict(

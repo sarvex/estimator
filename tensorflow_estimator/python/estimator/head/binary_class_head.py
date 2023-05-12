@@ -148,12 +148,12 @@ class BinaryClassHead(base_head.Head):
     if label_vocabulary is not None and not isinstance(label_vocabulary,
                                                        (list, tuple)):
       raise ValueError(
-          'label_vocabulary should be a list or a tuple. Given type: {}'.format(
-              type(label_vocabulary)))
+          f'label_vocabulary should be a list or a tuple. Given type: {type(label_vocabulary)}'
+      )
     thresholds = tuple(thresholds) if thresholds else tuple()
     for threshold in thresholds:
       if (threshold <= 0.0) or (threshold >= 1.0):
-        raise ValueError('thresholds not in (0, 1): {}.'.format((thresholds,)))
+        raise ValueError(f'thresholds not in (0, 1): {(thresholds, )}.')
     base_head.validate_loss_reduction(loss_reduction)
     if loss_fn:
       base_head.validate_loss_fn_args(loss_fn)
@@ -342,14 +342,14 @@ class BinaryClassHead(base_head.Head):
         class_ids = tf.compat.v1.math.argmax(
             two_class_logits, axis=-1, name=pred_keys.CLASS_IDS)
         class_ids = tf.compat.v1.expand_dims(class_ids, axis=-1)
-        if pred_keys.CLASS_IDS in keys:
-          predictions[pred_keys.CLASS_IDS] = class_ids
-        if pred_keys.CLASSES in keys:
-          if self._label_vocabulary is not None:
-            classes = self._class_string_table.lookup(class_ids)
-          else:
-            classes = tf.strings.as_string(class_ids, name='str_classes')
-          predictions[pred_keys.CLASSES] = classes
+      if pred_keys.CLASS_IDS in keys:
+        predictions[pred_keys.CLASS_IDS] = class_ids
+      if pred_keys.CLASSES in keys:
+        if self._label_vocabulary is not None:
+          classes = self._class_string_table.lookup(class_ids)
+        else:
+          classes = tf.strings.as_string(class_ids, name='str_classes')
+        predictions[pred_keys.CLASSES] = classes
       if pred_keys.ALL_CLASS_IDS in keys:
         predictions[pred_keys.ALL_CLASS_IDS] = base_head.all_class_ids(
             logits, n_classes=2)
@@ -363,9 +363,9 @@ class BinaryClassHead(base_head.Head):
     keys = metric_keys.MetricKeys
     with ops.name_scope('metrics', values=(regularization_losses,)):
       # Mean metric.
-      eval_metrics = {}
-      eval_metrics[self._loss_mean_key] = tf.keras.metrics.Mean(
-          name=keys.LOSS_MEAN)
+      eval_metrics = {
+          self._loss_mean_key: tf.keras.metrics.Mean(name=keys.LOSS_MEAN)
+      }
       eval_metrics[self._accuracy_key] = tf.keras.metrics.Accuracy(
           name=keys.ACCURACY)
       eval_metrics[self._precision_key] = tf.keras.metrics.Precision(

@@ -686,8 +686,8 @@ class MultiClassHead(tf.test.TestCase):
     labels = np.array(((1,), (1,)), dtype=np.int64)
     features = {'x': np.array(((42,),), dtype=np.int32)}
     expected_metric_keys = [
-        '{}/some_multiclass_head'.format(metric_keys.MetricKeys.LOSS_MEAN),
-        '{}/some_multiclass_head'.format(metric_keys.MetricKeys.ACCURACY)
+        f'{metric_keys.MetricKeys.LOSS_MEAN}/some_multiclass_head',
+        f'{metric_keys.MetricKeys.ACCURACY}/some_multiclass_head',
     ]
 
     eval_metrics = head.metrics()
@@ -1574,6 +1574,8 @@ class MultiClassHeadForEstimator(tf.test.TestCase):
     n_classes = 3
     head = head_lib.MultiClassHead(n_classes)
 
+
+
     class _Optimizer(tf.keras.optimizers.Optimizer):
 
       def get_updates(self, loss, params):
@@ -1586,8 +1588,8 @@ class MultiClassHeadForEstimator(tf.test.TestCase):
         ]
 
       def get_config(self):
-        config = super(_Optimizer, self).get_config()
-        return config
+        return super(_Optimizer, self).get_config()
+
 
     with self.assertRaisesRegexp(ValueError,
                                  r'trainable_variables cannot be None'):
@@ -1628,6 +1630,8 @@ class MultiClassHeadForEstimator(tf.test.TestCase):
     features = {'x': np.array(((42,),), dtype=np.int32)}
     expected_train_result = 'my_train_op'
 
+
+
     class _Optimizer(tf.keras.optimizers.Optimizer):
 
       def get_updates(self, loss, params):
@@ -1640,8 +1644,8 @@ class MultiClassHeadForEstimator(tf.test.TestCase):
         ]
 
       def get_config(self):
-        config = super(_Optimizer, self).get_config()
-        return config
+        return super(_Optimizer, self).get_config()
+
 
     # loss = sum(cross_entropy(labels, logits)) / batch_size
     #      = sum(10, 0) / 2 = 5.

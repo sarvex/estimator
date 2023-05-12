@@ -157,20 +157,22 @@ class MultiLabelHead(base_head.Head):
                classes_for_class_based_metrics=None,
                name=None):
     if n_classes is None or n_classes < 2:
-      raise ValueError('n_classes must be > 1 for multi-label classification. '
-                       'Given: {}'.format(n_classes))
+      raise ValueError(
+          f'n_classes must be > 1 for multi-label classification. Given: {n_classes}'
+      )
     thresholds = tuple(thresholds) if thresholds else tuple()
     for threshold in thresholds:
       if (threshold <= 0.0) or (threshold >= 1.0):
-        raise ValueError(
-            'thresholds must be in (0, 1) range. Given: {}'.format(threshold))
+        raise ValueError(f'thresholds must be in (0, 1) range. Given: {threshold}')
     if label_vocabulary is not None:
       if not isinstance(label_vocabulary, (list, tuple)):
-        raise ValueError('label_vocabulary must be a list or tuple. '
-                         'Given type: {}'.format(type(label_vocabulary)))
+        raise ValueError(
+            f'label_vocabulary must be a list or tuple. Given type: {type(label_vocabulary)}'
+        )
       if len(label_vocabulary) != n_classes:
-        raise ValueError('Length of label_vocabulary must be n_classes ({}). '
-                         'Given: {}'.format(n_classes, len(label_vocabulary)))
+        raise ValueError(
+            f'Length of label_vocabulary must be n_classes ({n_classes}). Given: {len(label_vocabulary)}'
+        )
 
     if loss_fn:
       base_head.validate_loss_fn_args(loss_fn)
@@ -181,16 +183,17 @@ class MultiLabelHead(base_head.Head):
         if not label_vocabulary:
           raise ValueError('label_vocabulary must be provided when '
                            'classes_for_class_based_metrics are strings.')
-        class_ids = []
-        for class_string in classes_for_class_based_metrics:
-          class_ids.append(label_vocabulary.index(class_string))
+        class_ids = [
+            label_vocabulary.index(class_string)
+            for class_string in classes_for_class_based_metrics
+        ]
         classes_for_class_based_metrics = tuple(class_ids)
       else:
         for class_id in classes_for_class_based_metrics:
           if (class_id < 0) or (class_id >= n_classes):
             raise ValueError(
-                'All classes_for_class_based_metrics must be in range [0, {}]. '
-                'Given: {}'.format(n_classes - 1, class_id))
+                f'All classes_for_class_based_metrics must be in range [0, {n_classes - 1}]. Given: {class_id}'
+            )
     else:
       classes_for_class_based_metrics = tuple()
     self._n_classes = n_classes
@@ -293,10 +296,9 @@ class MultiLabelHead(base_head.Head):
       else:
         if not label_values.dtype.is_integer:
           raise ValueError(
-              'Labels dtype should be integer. Instead got {}.'.format(
-                  label_values.dtype))
-        err_msg = (r'labels must be an integer SparseTensor with values in '
-                   r'[0, {})'.format(self._n_classes))
+              f'Labels dtype should be integer. Instead got {label_values.dtype}.'
+          )
+        err_msg = f'labels must be an integer SparseTensor with values in [0, {self._n_classes})'
         label_values = base_head.check_label_range(
             labels.values, self._n_classes, message=err_msg)
         if tf.executing_eagerly():
@@ -401,9 +403,9 @@ class MultiLabelHead(base_head.Head):
     keys = metric_keys.MetricKeys
     with ops.name_scope(None, 'metrics', (regularization_losses,)):
       # Mean metric.
-      eval_metrics = {}
-      eval_metrics[self._loss_mean_key] = tf.keras.metrics.Mean(
-          name=keys.LOSS_MEAN)
+      eval_metrics = {
+          self._loss_mean_key: tf.keras.metrics.Mean(name=keys.LOSS_MEAN)
+      }
       # The default summation_method is "interpolation" in the AUC metric.
       eval_metrics[self._auc_key] = tf.keras.metrics.AUC(name=keys.AUC)
       eval_metrics[self._auc_pr_key] = tf.keras.metrics.AUC(

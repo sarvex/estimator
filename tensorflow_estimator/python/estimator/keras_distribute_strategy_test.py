@@ -46,8 +46,7 @@ def simple_functional_model():
   b = tf.keras.layers.Dense(16, activation='relu')(a)
   b = tf.keras.layers.Dropout(0.1)(b)
   b = tf.keras.layers.Dense(_NUM_CLASS, activation='softmax')(b)
-  model = tf.keras.models.Model(inputs=[a], outputs=[b])
-  return model
+  return tf.keras.models.Model(inputs=[a], outputs=[b])
 
 
 def multi_inputs_multi_outputs_model():

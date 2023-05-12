@@ -65,10 +65,7 @@ def get_resource_for_simple_model():
 
 def randomize_io_type(array, name):
   switch = np.random.random()
-  if switch > 0.5:
-    return array
-  else:
-    return {name: array}
+  return array if switch > 0.5 else {name: array}
 
 
 class KerasPremadeModelTest(tf.test.TestCase):

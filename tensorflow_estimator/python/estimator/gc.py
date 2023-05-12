@@ -210,8 +210,8 @@ def _get_paths(base_dir, parser):
     # ListDirectory() return paths with "/" at the last if base_dir was GCS URL
     r = tf.compat.as_str_any(r)
     if r[-1] == '/':
-      r = r[0:len(r) - 1]
-    p = parser(Path(os.path.join(tf.compat.as_str_any(base_dir), r), None))
-    if p:
+      r = r[:-1]
+    if p := parser(Path(os.path.join(tf.compat.as_str_any(base_dir), r),
+                        None)):
       paths.append(p)
   return sorted(paths)

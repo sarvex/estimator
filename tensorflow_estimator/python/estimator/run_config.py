@@ -14,6 +14,7 @@
 # ==============================================================================
 """Environment configuration object for Estimators."""
 
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -32,7 +33,7 @@ from tensorflow.python.util.tf_export import estimator_export
 
 
 _USE_DEFAULT = object()
-_VALID_DEVICE_FN_ARGS = set(['op'])
+_VALID_DEVICE_FN_ARGS = {'op'}
 
 # A list of the property names in RunConfig that the user is allowed to change.
 _DEFAULT_REPLACEABLE_LIST = [
@@ -135,8 +136,8 @@ def _validate_service(service):
   """Validates the service key."""
   if service is not None and not isinstance(service, dict):
     raise TypeError(
-        'If "service" is set in TF_CONFIG, it must be a dict. Given %s' %
-        type(service))
+        f'If "service" is set in TF_CONFIG, it must be a dict. Given {type(service)}'
+    )
   return service
 
 
@@ -144,12 +145,12 @@ def _validate_task_type_and_task_id(cluster_spec, task_env, chief_task_type):
   """Validates the task type and index in `task_env` according to cluster."""
   if chief_task_type not in cluster_spec.jobs:
     raise ValueError(
-        'If "cluster" is set in TF_CONFIG, it must have one "%s" node.' %
-        chief_task_type)
+        f'If "cluster" is set in TF_CONFIG, it must have one "{chief_task_type}" node.'
+    )
   if len(cluster_spec.job_tasks(chief_task_type)) > 1:
     raise ValueError(
-        'The "cluster" in TF_CONFIG must have only one "%s" node.' %
-        chief_task_type)
+        f'The "cluster" in TF_CONFIG must have only one "{chief_task_type}" node.'
+    )
 
   task_type = task_env.get(_TASK_TYPE_KEY, None)
   task_id = task_env.get(_TASK_ID_KEY, None)
@@ -199,11 +200,13 @@ def _get_global_id_in_cluster(cluster_spec, task_type, task_id,
   # and task id (ascendingly). `ps` are ordered last.
 
   # Sort task names in cluster
-  task_type_ordered_list = [chief_task_type]
-  task_type_ordered_list.extend([
-      t for t in sorted(cluster_spec.jobs)
-      if t != chief_task_type and t != TaskType.PS
-  ])
+  task_type_ordered_list = [
+      chief_task_type,
+      *[
+          t for t in sorted(cluster_spec.jobs)
+          if t not in [chief_task_type, TaskType.PS]
+      ],
+  ]
   if TaskType.PS in cluster_spec.jobs:
     task_type_ordered_list.append(TaskType.PS)
 
@@ -214,8 +217,9 @@ def _get_global_id_in_cluster(cluster_spec, task_type, task_id,
     next_global_id += len(cluster_spec.job_tasks(t))
 
   # This should never happen.
-  raise RuntimeError('Internal Error: `task_type` ({}) is not in '
-                     'cluster_spec ({}).'.format(task_type, cluster_spec))
+  raise RuntimeError(
+      f'Internal Error: `task_type` ({task_type}) is not in cluster_spec ({cluster_spec}).'
+  )
 
 
 def _validate_save_ckpt_with_replaced_keys(new_copy, replaced_keys):
@@ -947,12 +951,12 @@ class RunConfig(object):
 
     for key, new_value in six.iteritems(kwargs):
       if key in allowed_properties_list:
-        setattr(config, '_' + key, new_value)
+        setattr(config, f'_{key}', new_value)
         continue
 
       raise ValueError(
-          'Replacing {} is not supported. Allowed properties are {}.'.format(
-              key, allowed_properties_list))
+          f'Replacing {key} is not supported. Allowed properties are {allowed_properties_list}.'
+      )
 
     _validate_save_ckpt_with_replaced_keys(config, kwargs.keys())
     _validate_properties(config)
@@ -977,10 +981,8 @@ def _get_model_dir(tf_config, model_dir):
   if model_dir_in_tf_config:
     if model_dir and model_dir_in_tf_config != model_dir:
       raise ValueError(
-          '`model_dir` provided in RunConfig construct, if set, '
-          'must have the same value as the model_dir in TF_CONFIG. '
-          'model_dir: {}\nTF_CONFIG["model_dir"]: {}.\n'.format(
-              model_dir, model_dir_in_tf_config))
+          f'`model_dir` provided in RunConfig construct, if set, must have the same value as the model_dir in TF_CONFIG. model_dir: {model_dir}\nTF_CONFIG["model_dir"]: {model_dir_in_tf_config}.\n'
+      )
 
     tf.compat.v1.logging.info('Using model_dir in TF_CONFIG: %s',
                               model_dir_in_tf_config)

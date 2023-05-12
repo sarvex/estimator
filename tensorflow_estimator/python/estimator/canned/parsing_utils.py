@@ -286,9 +286,9 @@ def _add_label_and_weight_to_parsing_spec(parsing_spec,
       value.
   """
   if label_key in parsing_spec:
-    raise ValueError('label should not be used as feature. '
-                     'label_key: {}, features: {}'.format(
-                         label_key, parsing_spec.keys()))
+    raise ValueError(
+        f'label should not be used as feature. label_key: {label_key}, features: {parsing_spec.keys()}'
+    )
   parsing_spec[label_key] = label_spec
 
   if weight_column is None:
@@ -298,15 +298,14 @@ def _add_label_and_weight_to_parsing_spec(parsing_spec,
     weight_column = tf.feature_column.numeric_column(weight_column)
 
   if not isinstance(weight_column, fc.NumericColumn):
-    raise ValueError('weight_column should be an instance of '
-                     'tf.feature_column.numeric_column. '
-                     'Given type: {} value: {}'.format(
-                         type(weight_column), weight_column))
+    raise ValueError(
+        f'weight_column should be an instance of tf.feature_column.numeric_column. Given type: {type(weight_column)} value: {weight_column}'
+    )
 
   if weight_column.key in parsing_spec:
-    raise ValueError('weight_column should not be used as feature. '
-                     'weight_column: {}, features: {}'.format(
-                         weight_column.key, parsing_spec.keys()))
+    raise ValueError(
+        f'weight_column should not be used as feature. weight_column: {weight_column.key}, features: {parsing_spec.keys()}'
+    )
 
   parsing_spec.update(weight_column.parse_example_spec)
   return parsing_spec

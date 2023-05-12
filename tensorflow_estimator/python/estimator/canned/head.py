@@ -53,7 +53,7 @@ LossSpec = collections.namedtuple(
 
 
 def _summary_key(head_name, val):
-  return '%s/%s' % (val, head_name) if head_name else val
+  return f'{val}/{head_name}' if head_name else val
 
 
 def _create_eval_metrics_tuple(fn, kwargs):
@@ -319,10 +319,7 @@ def _check_dense_labels_match_logits_and_reshape(labels, logits,
       labels = tf.compat.v1.expand_dims(labels, -1)
     labels_shape = tf.compat.v1.shape(labels)
     logits_shape = tf.compat.v1.shape(logits)
-    err_msg = (
-        'labels shape must be [D0, D1, ... DN, {}]. '
-        'Suggested Fix: check your n_classes argument to the estimator '
-        'and/or the shape of your label.'.format(expected_labels_dimension))
+    err_msg = f'labels shape must be [D0, D1, ... DN, {expected_labels_dimension}]. Suggested Fix: check your n_classes argument to the estimator and/or the shape of your label.'
     assert_rank = tf.compat.v1.debugging.assert_rank_at_least(
         labels, 2, message=err_msg)
     with tf.control_dependencies([assert_rank]):
@@ -383,8 +380,8 @@ def _get_weights_and_check_match_logits(features,
   else:
     err_msg = ('weights shape must be [D0, D1, ... DN] or [D0, D1, ... DN, 1]')
   with ops.name_scope(
-      None, 'weights',
-      values=tuple(six.itervalues(features)) + (logits,)) as scope:
+        None, 'weights',
+        values=tuple(six.itervalues(features)) + (logits,)) as scope:
     # Fetch the weights.
     if weight_column is None:
       return 1.
@@ -394,13 +391,15 @@ def _get_weights_and_check_match_logits(features,
     if not isinstance(
         weight_column,
         (tf.compat.v2.__internal__.feature_column.DenseColumn, feature_column._DenseColumn)):  # pylint: disable=protected-access
-      raise TypeError('Weight column must be either a string or _DenseColumn.'
-                      ' Given type: {}.'.format(type(weight_column)))
+      raise TypeError(
+          f'Weight column must be either a string or _DenseColumn. Given type: {type(weight_column)}.'
+      )
     weights = weight_column._get_dense_tensor(  # pylint: disable=protected-access
         feature_column._LazyBuilder(features))  # pylint: disable=protected-access
     if not (weights.dtype.is_floating or weights.dtype.is_integer):
-      raise ValueError('Weight column should be castable to float. '
-                       'Given dtype: {}'.format(weights.dtype))
+      raise ValueError(
+          f'Weight column should be castable to float. Given dtype: {weights.dtype}'
+      )
     weights = tf.cast(weights, name='weights', dtype=tf.dtypes.float32)
 
     # Validate the weights shape.
@@ -485,11 +484,12 @@ def _validate_loss_fn_args(loss_fn):
   loss_fn_args = function_utils.fn_args(loss_fn)
   for required_arg in ['labels', 'logits']:
     if required_arg not in loss_fn_args:
-      raise ValueError('loss_fn must contain argument: {}. '
-                       'Given arguments: {}'.format(required_arg, loss_fn_args))
-  invalid_args = list(set(loss_fn_args) - set(['labels', 'logits', 'features']))
-  if invalid_args:
-    raise ValueError('loss_fn has unexpected args: {}'.format(invalid_args))
+      raise ValueError(
+          f'loss_fn must contain argument: {required_arg}. Given arguments: {loss_fn_args}'
+      )
+  if invalid_args := list(
+      set(loss_fn_args) - {'labels', 'logits', 'features'}):
+    raise ValueError(f'loss_fn has unexpected args: {invalid_args}')
 
 
 def _validate_n_classes(n_classes):
@@ -506,7 +506,7 @@ def _validate_n_classes(n_classes):
     n_classes in its original type.
   """
   if isinstance(n_classes, int) and (n_classes <= 2):
-    raise ValueError('n_classes must be > 2: %s.' % n_classes)
+    raise ValueError(f'n_classes must be > 2: {n_classes}.')
 
   n_classes_as_tensor = ops.convert_to_tensor(n_classes)
   assert_n_classes = tf.compat.v1.debugging.assert_greater(
@@ -536,9 +536,9 @@ def _call_loss_fn(loss_fn, labels, logits, features, expected_loss_dim=1):
   if 'features' in loss_fn_args:
     kwargs['features'] = features
   with ops.name_scope(
-      None,
-      'call_loss_fn',
-      values=[labels, logits] + list(six.itervalues(features))):
+        None,
+        'call_loss_fn',
+        values=[labels, logits] + list(six.itervalues(features))):
     unweighted_loss = loss_fn(labels=labels, logits=logits, **kwargs)
     logits_shape = tf.compat.v1.shape(logits, name='logits_shape')
     expected_loss_shape = tf.concat([logits_shape[:-1], [expected_loss_dim]],
@@ -548,11 +548,14 @@ def _call_loss_fn(loss_fn, labels, logits, features, expected_loss_dim=1):
     check_loss_shape_op = tf.debugging.Assert(
         tf.reduce_all(tf.math.equal(loss_shape, expected_loss_shape)),
         data=[
-            'loss_fn must return Tensor of shape '
-            '[D0, D1, ... DN, {}]. '.format(expected_loss_dim),
-            'logits_shape: ', logits_shape, 'loss_shape: ', loss_shape
+            f'loss_fn must return Tensor of shape [D0, D1, ... DN, {expected_loss_dim}]. ',
+            'logits_shape: ',
+            logits_shape,
+            'loss_shape: ',
+            loss_shape,
         ],
-        name='check_loss_shape')
+        name='check_loss_shape',
+    )
     with tf.control_dependencies([check_loss_shape_op]):
       return tf.identity(unweighted_loss)
 
@@ -641,8 +644,7 @@ def _auc(labels, predictions, weights=None, curve='ROC', name=None):
 
 
 def _accuracy_at_threshold(labels, predictions, weights, threshold, name=None):
-  with ops.name_scope(name, 'accuracy_at_%s' % threshold,
-                      (predictions, labels, weights, threshold)) as scope:
+  with ops.name_scope(name, f'accuracy_at_{threshold}', (predictions, labels, weights, threshold)) as scope:
     threshold_predictions = tf.compat.v1.to_float(
         tf.math.greater_equal(predictions, threshold))
     return tf.compat.v1.metrics.accuracy(
@@ -653,8 +655,7 @@ def _accuracy_at_threshold(labels, predictions, weights, threshold, name=None):
 
 
 def _precision_at_threshold(labels, predictions, weights, threshold, name=None):
-  with ops.name_scope(name, 'precision_at_%s' % threshold,
-                      (predictions, labels, weights, threshold)) as scope:
+  with ops.name_scope(name, f'precision_at_{threshold}', (predictions, labels, weights, threshold)) as scope:
     precision_tensor, update_op = tf.compat.v1.metrics.precision_at_thresholds(
         labels=labels,
         predictions=predictions,
@@ -666,8 +667,7 @@ def _precision_at_threshold(labels, predictions, weights, threshold, name=None):
 
 
 def _recall_at_threshold(labels, predictions, weights, threshold, name=None):
-  with ops.name_scope(name, 'recall_at_%s' % threshold,
-                      (predictions, labels, weights, threshold)) as scope:
+  with ops.name_scope(name, f'recall_at_{threshold}', (predictions, labels, weights, threshold)) as scope:
     precision_tensor, update_op = tf.compat.v1.metrics.recall_at_thresholds(
         labels=labels,
         predictions=predictions,
@@ -736,11 +736,11 @@ def _multi_class_head_with_softmax_cross_entropy_loss(
   if label_vocabulary is not None and not isinstance(label_vocabulary,
                                                      (list, tuple)):
     raise ValueError(
-        'label_vocabulary should be a list or a tuple. Given type: {}'.format(
-            type(label_vocabulary)))
+        f'label_vocabulary should be a list or a tuple. Given type: {type(label_vocabulary)}'
+    )
   if (loss_reduction not in tf.compat.v1.losses.Reduction.all() or
       loss_reduction == tf.compat.v1.losses.Reduction.NONE):
-    raise ValueError('Invalid loss_reduction: {}'.format(loss_reduction))
+    raise ValueError(f'Invalid loss_reduction: {loss_reduction}')
   if loss_fn:
     _validate_loss_fn_args(loss_fn)
   return _MultiClassHeadWithSoftmaxCrossEntropyLoss(
@@ -810,16 +810,16 @@ class _MultiClassHeadWithSoftmaxCrossEntropyLoss(_Head):
     if self._label_vocabulary is None:
       if not labels.dtype.is_integer:
         raise ValueError(
-            'Labels dtype should be integer. Instead got {}.'.format(
-                labels.dtype))
+            f'Labels dtype should be integer. Instead got {labels.dtype}.')
       label_ids = labels
-    else:
-      if labels.dtype != tf.dtypes.string:
-        raise ValueError('Labels dtype should be string if there is a '
-                         'vocabulary. Instead got {}'.format(labels.dtype))
+    elif labels.dtype == tf.dtypes.string:
       label_ids = lookup_ops.index_table_from_tensor(
           vocabulary_list=tuple(self._label_vocabulary),
           name='class_id_lookup').lookup(labels)
+    else:
+      raise ValueError(
+          f'Labels dtype should be string if there is a vocabulary. Instead got {labels.dtype}'
+      )
     return _assert_range(label_ids, self._n_classes)
 
   def create_loss(self, features, mode, logits, labels):
@@ -1061,15 +1061,15 @@ def _binary_logistic_head_with_sigmoid_cross_entropy_loss(
   if label_vocabulary is not None and not isinstance(label_vocabulary,
                                                      (list, tuple)):
     raise TypeError(
-        'label_vocabulary should be a list or tuple. Given type: {}'.format(
-            type(label_vocabulary)))
+        f'label_vocabulary should be a list or tuple. Given type: {type(label_vocabulary)}'
+    )
 
   for threshold in thresholds:
     if (threshold <= 0.0) or (threshold >= 1.0):
-      raise ValueError('thresholds not in (0, 1): {}.'.format((thresholds,)))
+      raise ValueError(f'thresholds not in (0, 1): {(thresholds, )}.')
   if (loss_reduction not in tf.compat.v1.losses.Reduction.all() or
       loss_reduction == tf.compat.v1.losses.Reduction.NONE):
-    raise ValueError('Invalid loss_reduction: {}'.format(loss_reduction))
+    raise ValueError(f'Invalid loss_reduction: {loss_reduction}')
   if loss_fn:
     _validate_loss_fn_args(loss_fn)
   return _BinaryLogisticHeadWithSigmoidCrossEntropyLoss(
@@ -1432,7 +1432,7 @@ def _regression_head(weight_column=None,
   """
   if (loss_reduction not in tf.compat.v1.losses.Reduction.all() or
       loss_reduction == tf.compat.v1.losses.Reduction.NONE):
-    raise ValueError('Invalid loss_reduction: {}'.format(loss_reduction))
+    raise ValueError(f'Invalid loss_reduction: {loss_reduction}')
   if loss_fn:
     _validate_loss_fn_args(loss_fn)
   return _RegressionHeadWithMeanSquaredErrorLoss(
@@ -1456,7 +1456,7 @@ class _RegressionHeadWithMeanSquaredErrorLoss(_Head):
                name=None):
     """`Head` for regression."""
     if label_dimension < 1:
-      raise ValueError('Invalid label_dimension %s.' % label_dimension)
+      raise ValueError(f'Invalid label_dimension {label_dimension}.')
     self._logits_dimension = label_dimension
     self._weight_column = weight_column
     self._loss_reduction = loss_reduction
@@ -1656,8 +1656,8 @@ class _RegressionHeadWithMeanSquaredErrorLoss(_Head):
 
 def _append_update_ops(train_op):
   """Returns `train_op` appending `UPDATE_OPS` collection if present."""
-  update_ops = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.UPDATE_OPS)
-  if update_ops:
+  if update_ops := tf.compat.v1.get_collection(
+      tf.compat.v1.GraphKeys.UPDATE_OPS):
     return tf.group(train_op, *update_ops)
   return train_op
 
@@ -1699,15 +1699,13 @@ def _binary_logistic_or_multi_class_head(n_classes, weight_column,
   Returns:
     `head._Head` instance.
   """
-  if n_classes == 2:
-    head = _binary_logistic_head_with_sigmoid_cross_entropy_loss(
-        weight_column=weight_column,
-        label_vocabulary=label_vocabulary,
-        loss_reduction=loss_reduction)
-  else:
-    head = _multi_class_head_with_softmax_cross_entropy_loss(
-        n_classes,
-        weight_column=weight_column,
-        label_vocabulary=label_vocabulary,
-        loss_reduction=loss_reduction)
-  return head
+  return (_binary_logistic_head_with_sigmoid_cross_entropy_loss(
+      weight_column=weight_column,
+      label_vocabulary=label_vocabulary,
+      loss_reduction=loss_reduction,
+  ) if n_classes == 2 else _multi_class_head_with_softmax_cross_entropy_loss(
+      n_classes,
+      weight_column=weight_column,
+      label_vocabulary=label_vocabulary,
+      loss_reduction=loss_reduction,
+  ))

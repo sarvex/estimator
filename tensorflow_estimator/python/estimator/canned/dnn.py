@@ -37,9 +37,9 @@ _LEARNING_RATE = 0.05
 
 
 def _add_hidden_layer_summary(value, tag):
-  tf.compat.v1.summary.scalar('%s/fraction_of_zero_values' % tag,
+  tf.compat.v1.summary.scalar(f'{tag}/fraction_of_zero_values',
                               tf.math.zero_fraction(value))
-  tf.compat.v1.summary.histogram('%s/activation' % tag, value)
+  tf.compat.v1.summary.histogram(f'{tag}/activation', value)
 
 
 @estimator_export(v1=['estimator.experimental.dnn_logit_fn_builder'])
@@ -283,8 +283,8 @@ class _DNNModelV2(tf.keras.Model):
                **kwargs):
     super(_DNNModelV2, self).__init__(name=name, **kwargs)
     with ops.name_scope(
-        'input_from_feature_columns') as input_feature_column_scope:
-      layer_name = input_feature_column_scope + 'input_layer'
+          'input_from_feature_columns') as input_feature_column_scope:
+      layer_name = f'{input_feature_column_scope}input_layer'
       if feature_column_lib.is_feature_column_v2(feature_columns):
         self._input_layer = tf.keras.layers.DenseFeatures(
             feature_columns=feature_columns, name=layer_name)
@@ -361,8 +361,9 @@ class _DNNModelV2(tf.keras.Model):
 
 def _validate_features(features):
   if not isinstance(features, dict):
-    raise ValueError('features should be a dictionary of `Tensor`s. '
-                     'Given type: {}'.format(type(features)))
+    raise ValueError(
+        f'features should be a dictionary of `Tensor`s. Given type: {type(features)}'
+    )
 
 
 def _get_dnn_estimator_spec(use_tpu, head, features, labels, mode, logits,
@@ -487,8 +488,7 @@ def _dnn_model_fn_builder_v2(units, hidden_units, feature_columns,
     ValueError: If units is not an int.
   """
   if not isinstance(units, six.integer_types):
-    raise ValueError('units must be an int.  Given type: {}'.format(
-        type(units)))
+    raise ValueError(f'units must be an int.  Given type: {type(units)}')
   dnn_model = _DNNModelV2(
       units,
       hidden_units,

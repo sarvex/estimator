@@ -613,10 +613,7 @@ class LogitFnTest(tf.test.TestCase):
   def test_simple_call_logit_fn(self):
 
     def dummy_logit_fn(features, mode):
-      if mode == ModeKeys.TRAIN:
-        return features['f1']
-      else:
-        return features['f2']
+      return features['f1'] if mode == ModeKeys.TRAIN else features['f2']
 
     features = {'f1': tf.constant([[2., 3.]]), 'f2': tf.constant([[4., 5.]])}
     logit_fn_result = model_fn.call_logit_fn(dummy_logit_fn, features,

@@ -49,8 +49,8 @@ class BestExporterTest(tf.test.TestCase):
 
     export_dir_base = tempfile.mkdtemp()
     tf.compat.v1.gfile.MkDir(export_dir_base)
-    tf.compat.v1.gfile.MkDir(export_dir_base + "/export")
-    tf.compat.v1.gfile.MkDir(export_dir_base + "/eval")
+    tf.compat.v1.gfile.MkDir(f"{export_dir_base}/export")
+    tf.compat.v1.gfile.MkDir(f"{export_dir_base}/eval")
 
     exporter = exporter_lib.BestExporter(
         name="best_exporter",
@@ -80,8 +80,8 @@ class BestExporterTest(tf.test.TestCase):
 
     export_dir_base = tempfile.mkdtemp()
     tf.compat.v1.gfile.MkDir(export_dir_base)
-    tf.compat.v1.gfile.MkDir(export_dir_base + "/export")
-    tf.compat.v1.gfile.MkDir(export_dir_base + "/eval")
+    tf.compat.v1.gfile.MkDir(f"{export_dir_base}/export")
+    tf.compat.v1.gfile.MkDir(f"{export_dir_base}/eval")
 
     exporter = exporter_lib.BestExporter(
         name="best_exporter",
@@ -114,8 +114,8 @@ class BestExporterTest(tf.test.TestCase):
 
     export_dir_base = tempfile.mkdtemp()
     tf.compat.v1.gfile.MkDir(export_dir_base)
-    tf.compat.v1.gfile.MkDir(export_dir_base + "/export")
-    tf.compat.v1.gfile.MkDir(export_dir_base + "/eval")
+    tf.compat.v1.gfile.MkDir(f"{export_dir_base}/export")
+    tf.compat.v1.gfile.MkDir(f"{export_dir_base}/eval")
 
     eval_dir_base = os.path.join(export_dir_base, "eval_continuous")
     # _write_dict_to_summary is only called internally within graph mode.
@@ -155,8 +155,8 @@ class BestExporterTest(tf.test.TestCase):
 
     export_dir_base = tempfile.mkdtemp()
     tf.compat.v1.gfile.MkDir(export_dir_base)
-    tf.compat.v1.gfile.MkDir(export_dir_base + "/export")
-    tf.compat.v1.gfile.MkDir(export_dir_base + "/eval")
+    tf.compat.v1.gfile.MkDir(f"{export_dir_base}/export")
+    tf.compat.v1.gfile.MkDir(f"{export_dir_base}/eval")
 
     eval_dir_base = os.path.join(export_dir_base, "eval_continuous")
     estimator_lib._write_dict_to_summary(eval_dir_base, {}, 1)
@@ -189,8 +189,8 @@ class BestExporterTest(tf.test.TestCase):
 
     export_dir_base = tempfile.mkdtemp()
     tf.compat.v1.gfile.MkDir(export_dir_base)
-    tf.compat.v1.gfile.MkDir(export_dir_base + "/export")
-    tf.compat.v1.gfile.MkDir(export_dir_base + "/eval")
+    tf.compat.v1.gfile.MkDir(f"{export_dir_base}/export")
+    tf.compat.v1.gfile.MkDir(f"{export_dir_base}/eval")
 
     exporter = exporter_lib.BestExporter(
         name="best_exporter",
@@ -220,8 +220,8 @@ class BestExporterTest(tf.test.TestCase):
   def test_garbage_collect_exports(self):
     export_dir_base = tempfile.mkdtemp()
     tf.compat.v1.gfile.MkDir(export_dir_base)
-    tf.compat.v1.gfile.MkDir(export_dir_base + "/export")
-    tf.compat.v1.gfile.MkDir(export_dir_base + "/eval")
+    tf.compat.v1.gfile.MkDir(f"{export_dir_base}/export")
+    tf.compat.v1.gfile.MkDir(f"{export_dir_base}/eval")
 
     export_dir_1 = _create_test_export_dir(export_dir_base)
     export_dir_2 = _create_test_export_dir(export_dir_base)
@@ -271,7 +271,7 @@ class LatestExporterTest(tf.test.TestCase):
     def _serving_input_receiver_fn():
       pass
 
-    export_dir_base = tempfile.mkdtemp() + "export/"
+    export_dir_base = f"{tempfile.mkdtemp()}export/"
     tf.compat.v1.gfile.MkDir(export_dir_base)
 
     exporter = exporter_lib.LatestExporter(
@@ -299,7 +299,7 @@ class LatestExporterTest(tf.test.TestCase):
     def _serving_input_receiver_fn():
       pass
 
-    export_dir_base = tempfile.mkdtemp() + "export/"
+    export_dir_base = f"{tempfile.mkdtemp()}export/"
     tf.compat.v1.gfile.MkDir(export_dir_base)
 
     exporter = exporter_lib.FinalExporter(
@@ -328,7 +328,7 @@ class LatestExporterTest(tf.test.TestCase):
         checkpoint_path="checkpoint_path")
 
   def test_garbage_collect_exports(self):
-    export_dir_base = tempfile.mkdtemp() + "export/"
+    export_dir_base = f"{tempfile.mkdtemp()}export/"
     tf.compat.v1.gfile.MkDir(export_dir_base)
     export_dir_1 = _create_test_export_dir(export_dir_base)
     export_dir_2 = _create_test_export_dir(export_dir_base)
@@ -358,7 +358,7 @@ class LatestExporterTest(tf.test.TestCase):
     self.assertTrue(tf.compat.v1.gfile.Exists(export_dir_4))
 
   def test_garbage_collect_exports_with_trailing_delimiter(self):
-    export_dir_base = tempfile.mkdtemp() + "export/"
+    export_dir_base = f"{tempfile.mkdtemp()}export/"
     tf.compat.v1.gfile.MkDir(export_dir_base)
     export_dir_1 = _create_test_export_dir(export_dir_base)
     export_dir_2 = _create_test_export_dir(export_dir_base)
@@ -410,8 +410,7 @@ def _get_timestamped_export_dir(export_dir_base):
   # If this fails several times in a row, then something is seriously wrong.
   max_directory_creation_attempts = 10
 
-  attempts = 0
-  while attempts < max_directory_creation_attempts:
+  for attempts in range(1, max_directory_creation_attempts + 1):
     export_timestamp = int(time.time())
 
     export_dir = os.path.join(
@@ -423,12 +422,12 @@ def _get_timestamped_export_dir(export_dir_base):
       # instantly on return from this function.
       return export_dir
     time.sleep(1)
-    attempts += 1
     tf.compat.v1.logging.warn(
-        "Export directory {} already exists; retrying (attempt {}/{})".format(
-            export_dir, attempts, max_directory_creation_attempts))
-  raise RuntimeError("Failed to obtain a unique export directory name after "
-                     "{} attempts.".format(max_directory_creation_attempts))
+        f"Export directory {export_dir} already exists; retrying (attempt {attempts}/{max_directory_creation_attempts})"
+    )
+  raise RuntimeError(
+      f"Failed to obtain a unique export directory name after {max_directory_creation_attempts} attempts."
+  )
 
 
 if __name__ == "__main__":

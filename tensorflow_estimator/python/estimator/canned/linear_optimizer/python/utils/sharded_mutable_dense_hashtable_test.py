@@ -104,15 +104,11 @@ class _ShardedMutableDenseHashTableTest(tf.test.TestCase):
       self.assertAllEqual(num_shards, len(values_list))
 
       # Exported keys include empty key buckets set to the empty_key
-      self.assertAllEqual(
-          set([-2, 10, 12]), set(self.evaluate(keys_list[0]).flatten()))
-      self.assertAllEqual(
-          set([-2, 11]), set(self.evaluate(keys_list[1]).flatten()))
+      self.assertAllEqual({-2, 10, 12}, set(self.evaluate(keys_list[0]).flatten()))
+      self.assertAllEqual({-2, 11}, set(self.evaluate(keys_list[1]).flatten()))
       # Exported values include empty value buckets set to 0
-      self.assertAllEqual(
-          set([0, 2, 4]), set(self.evaluate(values_list[0]).flatten()))
-      self.assertAllEqual(
-          set([0, 3]), set(self.evaluate(values_list[1]).flatten()))
+      self.assertAllEqual({0, 2, 4}, set(self.evaluate(values_list[0]).flatten()))
+      self.assertAllEqual({0, 3}, set(self.evaluate(values_list[1]).flatten()))
 
 
 if __name__ == '__main__':

@@ -278,17 +278,14 @@ class MultiHeadTest(tf.test.TestCase):
     tol = 1e-3
     keys = metric_keys.MetricKeys
     expected_metrics = {
-        keys.LOSS + '/head1': expected_loss_head1,
-        keys.LOSS + '/head2': expected_loss_head2,
-        # Average loss over examples.
-        keys.LOSS_MEAN + '/head1': expected_loss_head1,
-        keys.LOSS_MEAN + '/head2': expected_loss_head2,
-        # auc and auc_pr cannot be reliably calculated for only 4-6 samples, but
-        # this assert tests that the algorithm remains consistent.
-        keys.AUC + '/head1': 0.1667,
-        keys.AUC + '/head2': 0.3333,
-        keys.AUC_PR + '/head1': 0.60228,
-        keys.AUC_PR + '/head2': 0.40152,
+        f'{keys.LOSS}/head1': expected_loss_head1,
+        f'{keys.LOSS}/head2': expected_loss_head2,
+        f'{keys.LOSS_MEAN}/head1': expected_loss_head1,
+        f'{keys.LOSS_MEAN}/head2': expected_loss_head2,
+        f'{keys.AUC}/head1': 0.1667,
+        f'{keys.AUC}/head2': 0.3333,
+        f'{keys.AUC_PR}/head1': 0.60228,
+        f'{keys.AUC_PR}/head2': 0.40152,
     }
 
     if tf.executing_eagerly():
@@ -575,10 +572,14 @@ class MultiHeadTest(tf.test.TestCase):
           six.b('{0:s}{1:.3f}'.format(expected_train_result, expected_loss)),
           train_result)
       test_lib._assert_simple_summaries(
-          self, {
+          self,
+          {
               metric_keys.MetricKeys.LOSS: expected_loss,
-              metric_keys.MetricKeys.LOSS + '/head1': expected_loss,
-          }, summary_str, tol)
+              f'{metric_keys.MetricKeys.LOSS}/head1': expected_loss,
+          },
+          summary_str,
+          tol,
+      )
 
   def test_train_one_head_with_optimizer(self):
     head1 = multi_label_head.MultiLabelHead(n_classes=2, name='head1')
@@ -602,6 +603,8 @@ class MultiHeadTest(tf.test.TestCase):
 
     expected_train_result = 'my_train_op'
 
+
+
     class _Optimizer(tf.keras.optimizers.Optimizer):
 
       def get_updates(self, loss, params):
@@ -614,8 +617,8 @@ class MultiHeadTest(tf.test.TestCase):
         ]
 
       def get_config(self):
-        config = super(_Optimizer, self).get_config()
-        return config
+        return super(_Optimizer, self).get_config()
+
 
     spec = multi_head.create_estimator_spec(
         features=features,
@@ -714,11 +717,15 @@ class MultiHeadTest(tf.test.TestCase):
           six.b('{0:s}{1:.3f}'.format(expected_train_result, expected_loss)),
           train_result)
       test_lib._assert_simple_summaries(
-          self, {
+          self,
+          {
               metric_keys.MetricKeys.LOSS: expected_loss,
-              metric_keys.MetricKeys.LOSS + '/head1': expected_loss_head1,
-              metric_keys.MetricKeys.LOSS + '/head2': expected_loss_head2,
-          }, summary_str, tol)
+              f'{metric_keys.MetricKeys.LOSS}/head1': expected_loss_head1,
+              f'{metric_keys.MetricKeys.LOSS}/head2': expected_loss_head2,
+          },
+          summary_str,
+          tol,
+      )
 
   def test_train_with_regularization_losses(self):
     head1 = multi_label_head.MultiLabelHead(n_classes=2, name='head1')
@@ -816,12 +823,16 @@ class MultiHeadTest(tf.test.TestCase):
           six.b('{0:s}{1:.3f}'.format(expected_train_result, expected_loss)),
           train_result)
       test_lib._assert_simple_summaries(
-          self, {
+          self,
+          {
               keys.LOSS_REGULARIZATION: expected_regularization_loss,
               keys.LOSS: expected_loss,
-              keys.LOSS + '/head1': expected_loss_head1,
-              keys.LOSS + '/head2': expected_loss_head2,
-          }, summary_str, tol)
+              f'{keys.LOSS}/head1': expected_loss_head1,
+              f'{keys.LOSS}/head2': expected_loss_head2,
+          },
+          summary_str,
+          tol,
+      )
 
 
 @test_util.deprecated_graph_mode_only

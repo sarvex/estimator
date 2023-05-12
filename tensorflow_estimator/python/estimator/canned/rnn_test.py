@@ -75,13 +75,13 @@ def create_checkpoint(kernel, recurrent, bias, dense_kernel, dense_bias,
     global_step: Initial global step to save in checkpoint.
     model_dir: Directory into which checkpoint is saved.
   """
-  model_weights = {}
-  model_weights[CELL_KERNEL_NAME] = kernel
-  model_weights[CELL_RECURRENT_KERNEL_NAME] = recurrent
-  model_weights[CELL_BIAS_NAME] = bias
-  model_weights[LOGITS_WEIGHTS_NAME] = dense_kernel
-  model_weights[LOGITS_BIAS_NAME] = dense_bias
-
+  model_weights = {
+      CELL_KERNEL_NAME: kernel,
+      CELL_RECURRENT_KERNEL_NAME: recurrent,
+      CELL_BIAS_NAME: bias,
+      LOGITS_WEIGHTS_NAME: dense_kernel,
+      LOGITS_BIAS_NAME: dense_bias,
+  }
   with tf.Graph().as_default():
     # Create model variables.
     for k, v in six.iteritems(model_weights):
@@ -763,10 +763,10 @@ class RNNModelTest(tf.test.TestCase, parameterized.TestCase):
     model = self._get_compiled_model(return_sequences=True)
     model.fit(x=self.x, y=self.y, batch_size=1, steps_per_epoch=1, epochs=1)
     y1 = model.predict(x=self.x, steps=1)
-    model.save_weights(self.get_temp_dir() + 'model')
+    model.save_weights(f'{self.get_temp_dir()}model')
 
     model = self._get_compiled_model(return_sequences=True, name='model-2')
-    model.load_weights(self.get_temp_dir() + 'model')
+    model.load_weights(f'{self.get_temp_dir()}model')
     y2 = model.predict(x=self.x, steps=1)
     self.assertAllClose(y1, y2)
 
@@ -888,10 +888,7 @@ class RNNClassifierTrainingTest(tf.test.TestCase):
   def _assert_checkpoint(self, n_classes, input_units, cell_units,
                          expected_global_step):
 
-    shapes = {
-        name: shape
-        for (name, shape) in tf.train.list_variables(self.get_temp_dir())
-    }
+    shapes = dict(tf.train.list_variables(self.get_temp_dir()))
 
     self.assertEqual([], shapes[tf.compat.v1.GraphKeys.GLOBAL_STEP])
     self.assertEqual(
@@ -918,7 +915,7 @@ class RNNClassifierTrainingTest(tf.test.TestCase):
   def _mock_optimizer(self, expected_loss=None):
     var_names = (CELL_BIAS_NAME, CELL_KERNEL_NAME, CELL_RECURRENT_KERNEL_NAME,
                  LOGITS_BIAS_NAME, LOGITS_WEIGHTS_NAME)
-    expected_var_names = ['%s:0' % name for name in var_names]
+    expected_var_names = [f'{name}:0' for name in var_names]
 
     class _Optimizer(tf.keras.optimizers.Optimizer):
       """Mock optimizer checking that loss has the proper value."""
@@ -1414,9 +1411,7 @@ class RNNClassifierPredictionTest(tf.test.TestCase):
     if 'n_classes' in kwargs:
       n_classes = kwargs['n_classes']
       assert n_classes >= 2
-    label_vocabulary = [
-        'class_{}'.format(class_idx) for class_idx in range(n_classes)
-    ]
+    label_vocabulary = [f'class_{class_idx}' for class_idx in range(n_classes)]
 
     est = rnn.RNNClassifier(
         units=[2],

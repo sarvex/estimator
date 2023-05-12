@@ -56,16 +56,16 @@ class InputFnBuilder(object):
     else:
       data1 = tf.math.sin(2 * time_offset) + tf.math.cos(3 * time_offset)
     data1_noise = \
-      noise_stddev / 4. * tf.random.normal([num_samples], 1)[:, None]
+        noise_stddev / 4. * tf.random.normal([num_samples], 1)[:, None]
     data1 = tf.math.add(data1, data1_noise)
 
     data2 = tf.math.sin(3 * time_offset) + tf.math.cos(5 * time_offset)
     data2_noise = \
-      noise_stddev / 3. * tf.random.normal([num_samples], 1)[:, None]
+        noise_stddev / 3. * tf.random.normal([num_samples], 1)[:, None]
     data2 = tf.math.add(data2, data2_noise)
     data = tf.concat((4 * data1, 3 * data2), 1)
-    self.train_data, self.test_data = data[0:split], data[split:]
-    self.train_time, self.test_time = time[0:split], time[split:]
+    self.train_data, self.test_data = data[:split], data[split:]
+    self.train_time, self.test_time = time[:split], time[split:]
 
   def train_or_test_input_fn(self, time, data):
 
@@ -126,8 +126,7 @@ class InputFnBuilder(object):
     self.initialize_data()
     predict_true_values = tf.concat(
         [self.train_data[self.window_size:], self.test_data], 0)[None, :]
-    true_values = predict_true_values[0, :, 0]
-    return true_values
+    return predict_true_values[0, :, 0]
 
 
 @test_util.run_v1_only("Currently incompatible with ResourceVariable")
@@ -183,13 +182,13 @@ class ARModelTrainingTest(tf.test.TestCase):
     # Test predict
     (predictions,) = tuple(
         estimator.predict(input_fn=input_fn_builder.prediction_input_fn))
-    predicted_mean = predictions["mean"][:, 0]
-
     if loss == ar_model.ARModel.NORMAL_LIKELIHOOD_LOSS:
       variances = predictions["covariance"][:, 0]
       standard_deviations = tf.math.sqrt(variances)
       # Note that we may get tighter bounds with more training steps.
       true_values = input_fn_builder.true_values()
+      predicted_mean = predictions["mean"][:, 0]
+
       errors = tf.math.abs(predicted_mean -
                            true_values) > 4 * standard_deviations
       fraction_errors = tf.math.reduce_mean(tf.cast(errors, tf.dtypes.float32))

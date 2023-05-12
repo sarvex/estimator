@@ -348,11 +348,11 @@ class ExportTest(tf.test.TestCase):
     with tf.Graph().as_default():
       serving_input_receiver = serving_input_receiver_fn()
       self.assertEqual(
-          set(["int_feature", "float_feature"]),
-          set(serving_input_receiver.features.keys()))
-      self.assertEqual(
-          set(["examples"]),
-          set(serving_input_receiver.receiver_tensors.keys()))
+          {"int_feature", "float_feature"},
+          set(serving_input_receiver.features.keys()),
+      )
+      self.assertEqual({"examples"},
+                       set(serving_input_receiver.receiver_tensors.keys()))
 
       example = example_pb2.Example()
       text_format.Parse(
@@ -427,12 +427,12 @@ class ExportTest(tf.test.TestCase):
         features)
     with tf.Graph().as_default():
       serving_input_receiver = serving_input_receiver_fn()
+      self.assertEqual({"feature_1", "feature_2"},
+                       set(serving_input_receiver.features.keys()))
       self.assertEqual(
-          set(["feature_1", "feature_2"]),
-          set(serving_input_receiver.features.keys()))
-      self.assertEqual(
-          set(["feature_1", "feature_2"]),
-          set(serving_input_receiver.receiver_tensors.keys()))
+          {"feature_1", "feature_2"},
+          set(serving_input_receiver.receiver_tensors.keys()),
+      )
       self.assertEqual(
           tf.dtypes.string,
           serving_input_receiver.receiver_tensors["feature_1"].dtype)
@@ -450,12 +450,13 @@ class ExportTest(tf.test.TestCase):
         features, labels)
     with tf.Graph().as_default():
       input_receiver = input_receiver_fn()
+      self.assertEqual({"feature_1", "feature_2"},
+                       set(input_receiver.features.keys()))
+      self.assertEqual({"foo", "bar"}, set(input_receiver.labels.keys()))
       self.assertEqual(
-          set(["feature_1", "feature_2"]), set(input_receiver.features.keys()))
-      self.assertEqual(set(["foo", "bar"]), set(input_receiver.labels.keys()))
-      self.assertEqual(
-          set(["feature_1", "feature_2", "foo", "bar"]),
-          set(input_receiver.receiver_tensors.keys()))
+          {"feature_1", "feature_2", "foo", "bar"},
+          set(input_receiver.receiver_tensors.keys()),
+      )
       self.assertEqual(tf.dtypes.string,
                        input_receiver.receiver_tensors["feature_1"].dtype)
       self.assertEqual(tf.dtypes.int32,
@@ -474,16 +475,15 @@ class ExportTest(tf.test.TestCase):
     with tf.Graph().as_default():
       input_receiver = input_receiver_fn1()
       self.assertIsInstance(input_receiver.features, tf.Tensor)
-      self.assertEqual(set(["foo", "bar"]), set(input_receiver.labels.keys()))
-      self.assertEqual(
-          set(["input", "foo", "bar"]),
-          set(input_receiver.receiver_tensors.keys()))
+      self.assertEqual({"foo", "bar"}, set(input_receiver.labels.keys()))
+      self.assertEqual({"input", "foo", "bar"},
+                       set(input_receiver.receiver_tensors.keys()))
 
       input_receiver = input_receiver_fn2()
       self.assertIsInstance(input_receiver.features, tf.Tensor)
       self.assertIsInstance(input_receiver.labels, tf.Tensor)
-      self.assertEqual(
-          set(["input", "label"]), set(input_receiver.receiver_tensors.keys()))
+      self.assertEqual({"input", "label"},
+                       set(input_receiver.receiver_tensors.keys()))
 
   def test_build_raw_supervised_input_receiver_fn_batch_size(self):
     features = {
@@ -520,10 +520,10 @@ class ExportTest(tf.test.TestCase):
 
     with tf.Graph().as_default():
       input_receiver = input_receiver_fn()
-      self.assertEqual(set(["x", "y"]), set(input_receiver.features.keys()))
+      self.assertEqual({"x", "y"}, set(input_receiver.features.keys()))
       self.assertIsInstance(input_receiver.labels, tf.Tensor)
-      self.assertEqual(
-          set(["x", "y", "label"]), set(input_receiver.receiver_tensors.keys()))
+      self.assertEqual({"x", "y", "label"},
+                       set(input_receiver.receiver_tensors.keys()))
 
   def test_build_supervised_input_receiver_fn_from_input_fn_args(self):
 
@@ -540,11 +540,10 @@ class ExportTest(tf.test.TestCase):
 
     with tf.Graph().as_default():
       input_receiver = input_receiver_fn()
-      self.assertEqual(set(["z", "y"]), set(input_receiver.features.keys()))
-      self.assertEqual(set(["my_label"]), set(input_receiver.labels.keys()))
-      self.assertEqual(
-          set(["z", "y", "my_label"]),
-          set(input_receiver.receiver_tensors.keys()))
+      self.assertEqual({"z", "y"}, set(input_receiver.features.keys()))
+      self.assertEqual({"my_label"}, set(input_receiver.labels.keys()))
+      self.assertEqual({"z", "y", "my_label"},
+                       set(input_receiver.receiver_tensors.keys()))
 
 
 class TensorServingReceiverTest(tf.test.TestCase):

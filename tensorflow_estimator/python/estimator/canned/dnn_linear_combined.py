@@ -65,20 +65,21 @@ def _linear_learning_rate(num_linear_feature_columns):
 
 
 def _add_layer_summary(value, tag):
-  tf.compat.v1.summary.scalar('%s/fraction_of_zero_values' % tag,
+  tf.compat.v1.summary.scalar(f'{tag}/fraction_of_zero_values',
                               tf.math.zero_fraction(value))
-  tf.compat.v1.summary.histogram('%s/activation' % tag, value)
+  tf.compat.v1.summary.histogram(f'{tag}/activation', value)
 
 
 def _validate_feature_columns(linear_feature_columns, dnn_feature_columns):
   """Validates feature columns DNNLinearCombinedRegressor."""
   linear_feature_columns = linear_feature_columns or []
   dnn_feature_columns = dnn_feature_columns or []
-  feature_columns = (list(linear_feature_columns) + list(dnn_feature_columns))
-  if not feature_columns:
+  if feature_columns := (list(linear_feature_columns) +
+                         list(dnn_feature_columns)):
+    return feature_columns
+  else:
     raise ValueError('Either linear_feature_columns or dnn_feature_columns '
                      'must be defined.')
-  return feature_columns
 
 
 def _dnn_linear_combined_model_fn_v2(

@@ -219,7 +219,7 @@ class Head(object):
     raise NotImplementedError('Calling an abstract method.')
 
   def _summary_key(self, key):
-    return '{}/{}'.format(key, self.name) if self.name else key
+    return f'{key}/{self.name}' if self.name else key
 
   def create_estimator_spec(self,
                             features,
@@ -417,8 +417,9 @@ def check_dense_labels_match_logits_and_reshape(labels, logits,
         labels_rank += 1
       labels_shape = labels._shape_tuple()  # pylint: disable=protected-access
       if labels_rank < 2:
-        raise ValueError('labels must have rank at least 2.  Received rank {}, '
-                         'shape {}'.format(labels_rank, labels_shape))
+        raise ValueError(
+            f'labels must have rank at least 2.  Received rank {labels_rank}, shape {labels_shape}'
+        )
       if labels_shape[-1] != expected_labels_dimension:
         raise ValueError(
             _MISMATCHED_LABEL_DIM_ERR_MSG.format(expected_labels_dimension,
@@ -427,9 +428,8 @@ def check_dense_labels_match_logits_and_reshape(labels, logits,
       expected_labels_shape = logits_shape[:-1] + (expected_labels_dimension,)
       if expected_labels_shape != labels_shape:
         raise ValueError(
-            '{}, expected_labels_shape: {}. labels_shape: {}.'.format(
-                _LABEL_SHAPE_ERR_MSG.format(expected_labels_dimension),
-                expected_labels_shape, labels_shape))
+            f'{_LABEL_SHAPE_ERR_MSG.format(expected_labels_dimension)}, expected_labels_shape: {expected_labels_shape}. labels_shape: {labels_shape}.'
+        )
       return labels
 
     # Graph mode.
@@ -496,7 +496,7 @@ def get_weights_and_check_match_logits(features,
   else:
     err_msg = ('weights shape must be [D0, D1, ... DN] or [D0, D1, ... DN, 1]')
   with ops.name_scope(
-      'weights', values=tuple(six.itervalues(features)) + (logits,)) as scope:
+        'weights', values=tuple(six.itervalues(features)) + (logits,)) as scope:
     # Fetch the weights.
     if weight_column is None:
       return 1.
@@ -506,13 +506,15 @@ def get_weights_and_check_match_logits(features,
           key=weight_column, shape=(1,))
     if not isinstance(weight_column,
                       (feature_column_lib.NumericColumn, _NumericColumn)):
-      raise TypeError('Weight column must be either a string or NumericColumn.'
-                      ' Given type: {}.'.format(type(weight_column)))
+      raise TypeError(
+          f'Weight column must be either a string or NumericColumn. Given type: {type(weight_column)}.'
+      )
     weights = weight_column._get_dense_tensor(  # pylint: disable=protected-access
         _LazyBuilder(features))
     if not (weights.dtype.is_floating or weights.dtype.is_integer):
-      raise ValueError('Weight column should be castable to float. '
-                       'Given dtype: {}'.format(weights.dtype))
+      raise ValueError(
+          f'Weight column should be castable to float. Given dtype: {weights.dtype}'
+      )
     weights = tf.cast(weights, name='weights', dtype=tf.dtypes.float32)
     # Validate the weights shape.
     # Eager mode.
@@ -524,19 +526,19 @@ def get_weights_and_check_match_logits(features,
       if (weights_rank is not None and logits_rank is not None and
           weights_rank == logits_rank - 1):
         if logits_shape[:-1] != weights_shape:
-          raise ValueError('{}, logits_shape: {}. weights_shape: {}.'.format(
-              err_msg, logits_shape, weights_shape))
+          raise ValueError(
+              f'{err_msg}, logits_shape: {logits_shape}. weights_shape: {weights_shape}.'
+          )
         return tf.compat.v1.expand_dims(weights, -1, name=scope)
       supported_weights_shape = logits_shape[:-1] + (1,)
-      if allow_per_logit_weights:
-        if (logits_shape != weights_shape and
-            supported_weights_shape != weights_shape):
-          raise ValueError('{}, logits_shape: {}. weights_shape: {}.'.format(
-              err_msg, logits_shape, weights_shape))
-      else:
-        if supported_weights_shape != weights_shape:
-          raise ValueError('{}, logits_shape: {}. weights_shape: {}.'.format(
-              err_msg, logits_shape, weights_shape))
+      if (allow_per_logit_weights and
+          (logits_shape != weights_shape
+           and supported_weights_shape != weights_shape)
+          or not allow_per_logit_weights
+          and supported_weights_shape != weights_shape):
+        raise ValueError(
+            f'{err_msg}, logits_shape: {logits_shape}. weights_shape: {weights_shape}.'
+        )
       return weights
 
     # Graph mode.
@@ -586,13 +588,14 @@ def check_logits_final_dim(logits, expected_logits_dimension):
       logits_shape = logits._shape_tuple()  # pylint: disable=protected-access
       logits_rank = logits._rank()  # pylint: disable=protected-access
       if logits_rank < 2:
-        raise ValueError('logits must have rank at least 2.  Received rank {}, '
-                         'shape {}'.format(logits_rank, logits_shape))
+        raise ValueError(
+            f'logits must have rank at least 2.  Received rank {logits_rank}, shape {logits_shape}'
+        )
       if (isinstance(expected_logits_dimension, int) and
           logits_shape[-1] != expected_logits_dimension):
         raise ValueError(
-            'logits shape must be [D0, D1, ... DN, logits_dimension], '
-            'got {}.'.format(logits_shape))
+            f'logits shape must be [D0, D1, ... DN, logits_dimension], got {logits_shape}.'
+        )
       return logits
     # Graph mode
     logits_shape = tf.compat.v1.shape(logits)
@@ -607,8 +610,8 @@ def check_logits_final_dim(logits, expected_logits_dimension):
         if (isinstance(expected_logits_dimension, int) and
             static_shape[-1] != expected_logits_dimension):
           raise ValueError(
-              'logits shape must be [D0, D1, ... DN, logits_dimension], '
-              'got {}.'.format(static_shape))
+              f'logits shape must be [D0, D1, ... DN, logits_dimension], got {static_shape}.'
+          )
         return logits
       assert_dimension = tf.compat.v1.debugging.assert_equal(
           expected_logits_dimension,
@@ -634,21 +637,20 @@ def validate_loss_fn_args(loss_fn):
   loss_fn_args = function_utils.fn_args(loss_fn)
   for required_arg in ['labels', 'logits']:
     if required_arg not in loss_fn_args:
-      raise ValueError('loss_fn must contain argument: {}. '
-                       'Given arguments: {}'.format(required_arg, loss_fn_args))
-  invalid_args = list(
-      set(loss_fn_args) -
-      set(['labels', 'logits', 'features', 'loss_reduction']))
-  if invalid_args:
-    raise ValueError('loss_fn has unexpected args: {}'.format(invalid_args))
+      raise ValueError(
+          f'loss_fn must contain argument: {required_arg}. Given arguments: {loss_fn_args}'
+      )
+  if invalid_args := list(
+      set(loss_fn_args) - {'labels', 'logits', 'features', 'loss_reduction'}):
+    raise ValueError(f'loss_fn has unexpected args: {invalid_args}')
 
 
 def validate_loss_reduction(loss_reduction):
   if (loss_reduction not in tf.losses.Reduction.all() or
       loss_reduction == tf.losses.Reduction.NONE):
     raise ValueError(
-        'Invalid loss_reduction: {}. See `tf.losses.Reduction` for valid '
-        'options.'.format(loss_reduction))
+        f'Invalid loss_reduction: {loss_reduction}. See `tf.losses.Reduction` for valid options.'
+    )
 
 
 def validate_update_ops(update_ops=None):
@@ -660,14 +662,14 @@ def validate_update_ops(update_ops=None):
 def validate_v2_optimizer(optimzier):
   if not isinstance(optimzier, tf.keras.optimizers.Optimizer):
     raise ValueError(
-        'The given optimizer is not a tf.keras.optimizers.Optimizer instance. '
-        'Given: {}'.format(optimzier))
+        f'The given optimizer is not a tf.keras.optimizers.Optimizer instance. Given: {optimzier}'
+    )
 
 
 def validate_trainable_variables(trainable_variables=None):
   if trainable_variables is None:
-    raise ValueError('trainable_variables cannot be None. Given {}'.format(
-        trainable_variables))
+    raise ValueError(
+        f'trainable_variables cannot be None. Given {trainable_variables}')
   if not isinstance(trainable_variables, (list, tuple)):
     raise ValueError(
         _VALIDATION_ERROR_MSG.format('trainable_variables',
@@ -688,7 +690,7 @@ def validate_n_classes(n_classes):
     n_classes in its original type.
   """
   if isinstance(n_classes, int) and (n_classes <= 2):
-    raise ValueError('n_classes must be > 2: %s.' % n_classes)
+    raise ValueError(f'n_classes must be > 2: {n_classes}.')
 
   n_classes_as_tensor = ops.convert_to_tensor(n_classes)
   assert_n_classes = tf.compat.v1.debugging.assert_greater(
@@ -723,7 +725,7 @@ def call_loss_fn(loss_fn, labels, logits, features, expected_loss_dim=1):
   if 'features' in loss_fn_args:
     kwargs['features'] = features
   with ops.name_scope(
-      'call_loss_fn', values=[labels, logits] + list(six.itervalues(features))):
+        'call_loss_fn', values=[labels, logits] + list(six.itervalues(features))):
     unweighted_loss = loss_fn(labels=labels, logits=logits, **kwargs)
     # Eager mode.
     if tf.executing_eagerly():
@@ -732,9 +734,12 @@ def call_loss_fn(loss_fn, labels, logits, features, expected_loss_dim=1):
       expected_loss_shape = logits_shape[:-1] + (expected_loss_dim,)
       if loss_shape != expected_loss_shape:
         raise ValueError(
-            'loss_fn must return Tensor of shape '
-            '[D0, D1, ... DN, {}]. '.format(expected_loss_dim),
-            'logits_shape: ', logits_shape, 'loss_shape: ', loss_shape)
+            f'loss_fn must return Tensor of shape [D0, D1, ... DN, {expected_loss_dim}]. ',
+            'logits_shape: ',
+            logits_shape,
+            'loss_shape: ',
+            loss_shape,
+        )
       return unweighted_loss
     # Graph mode.
     logits_shape = tf.compat.v1.shape(logits, name='logits_shape')
@@ -745,11 +750,14 @@ def call_loss_fn(loss_fn, labels, logits, features, expected_loss_dim=1):
     check_loss_shape_op = tf.debugging.Assert(
         tf.reduce_all(tf.math.equal(loss_shape, expected_loss_shape)),
         data=[
-            'loss_fn must return Tensor of shape '
-            '[D0, D1, ... DN, {}]. '.format(expected_loss_dim),
-            'logits_shape: ', logits_shape, 'loss_shape: ', loss_shape
+            f'loss_fn must return Tensor of shape [D0, D1, ... DN, {expected_loss_dim}]. ',
+            'logits_shape: ',
+            logits_shape,
+            'loss_shape: ',
+            loss_shape,
         ],
-        name='check_loss_shape')
+        name='check_loss_shape',
+    )
     with tf.control_dependencies([check_loss_shape_op]):
       return tf.identity(unweighted_loss)
 
@@ -757,9 +765,9 @@ def call_loss_fn(loss_fn, labels, logits, features, expected_loss_dim=1):
 def check_prediction_keys(pred_keys, valid_keys):
   for key in pred_keys:
     if key not in valid_keys:
-      raise ValueError('Prediction key must be in PredictionKeys, given: {}.'
-                       'Valid prediction keys include {}.'.format(
-                           key, valid_keys))
+      raise ValueError(
+          f'Prediction key must be in PredictionKeys, given: {key}.Valid prediction keys include {valid_keys}.'
+      )
 
 
 def all_class_ids(logits, n_classes):
@@ -794,8 +802,7 @@ def check_label_range(labels, n_classes, message=None):
     if tf.executing_eagerly():
       assert_less = tf.reduce_all(tf.math.less_equal(labels, n_classes - 1))
       if not assert_less:
-        raise ValueError(message or
-                         'Labels must be <= {} - 1'.format(n_classes))
+        raise ValueError(message or f'Labels must be <= {n_classes} - 1')
       assert_greater = tf.reduce_all(tf.math.greater_equal(labels, 0))
       if not assert_greater:
         raise ValueError(message or 'Labels must be >= 0')

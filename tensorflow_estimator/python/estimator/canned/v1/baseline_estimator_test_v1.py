@@ -192,7 +192,7 @@ class BaselineEstimatorPredictTest(tf.test.TestCase):
         num_epochs=1,
         shuffle=False)
     predictions = baseline_estimator.predict(input_fn=predict_input_fn)
-    predicted_scores = list([x['predictions'] for x in predictions])
+    predicted_scores = [x['predictions'] for x in predictions]
     # x * weight + bias = 2. * 10. + .2 = 20.2
     self.assertAllClose([[.2]], predicted_scores)
 
@@ -217,7 +217,7 @@ class BaselineEstimatorPredictTest(tf.test.TestCase):
         num_epochs=1,
         shuffle=False)
     predictions = baseline_estimator.predict(input_fn=predict_input_fn)
-    predicted_scores = list([x['predictions'] for x in predictions])
+    predicted_scores = [x['predictions'] for x in predictions]
     # score = bias, shape=[batch_size, label_dimension]
     self.assertAllClose([[0.2, 0.4, 0.6], [0.2, 0.4, 0.6]], predicted_scores)
 
@@ -267,7 +267,6 @@ class BaselineEstimatorIntegrationTest(tf.test.TestCase):
   def test_numpy_input_fn(self):
     """Tests complete flow with numpy_input_fn."""
     label_dimension = 2
-    input_dimension = label_dimension
     batch_size = 10
     prediction_length = batch_size
     data = np.linspace(0., 2., batch_size * label_dimension, dtype=np.float32)
@@ -292,13 +291,15 @@ class BaselineEstimatorIntegrationTest(tf.test.TestCase):
         num_epochs=1,
         shuffle=False)
 
+    input_dimension = label_dimension
     self._test_complete_flow(
         train_input_fn=train_input_fn,
         eval_input_fn=eval_input_fn,
         predict_input_fn=predict_input_fn,
         input_dimension=input_dimension,
-        label_dimension=label_dimension,
-        prediction_length=prediction_length)
+        input_dimension=input_dimension,
+        prediction_length=prediction_length,
+    )
 
 
 @test_util.run_v1_only('Tests v1 only symbols')
@@ -313,7 +314,7 @@ class BaselineEstimatorTrainingTest(tf.test.TestCase):
       shutil.rmtree(self._model_dir)
 
   def _mock_optimizer(self, expected_loss=None):
-    expected_var_names = ['%s:0' % BIAS_NAME]
+    expected_var_names = [f'{BIAS_NAME}:0']
 
     def _minimize(loss, global_step=None, var_list=None):
       trainable_vars = var_list or tf.compat.v1.get_collection(
@@ -351,10 +352,7 @@ class BaselineEstimatorTrainingTest(tf.test.TestCase):
                          label_dimension,
                          expected_global_step,
                          expected_bias=None):
-    shapes = {
-        name: shape
-        for (name, shape) in tf.train.list_variables(self._model_dir)
-    }
+    shapes = dict(tf.train.list_variables(self._model_dir))
 
     self.assertEqual([], shapes[tf.compat.v1.GraphKeys.GLOBAL_STEP])
     self.assertEqual(

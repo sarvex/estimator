@@ -60,34 +60,27 @@ def _canonicalize_numpy_data(data, require_single_batch):
   features = {key: numpy.array(value) for key, value in data.items()}
   if (_feature_keys.TrainEvalFeatures.TIMES not in features or
       _feature_keys.TrainEvalFeatures.VALUES not in features):
-    raise ValueError("{} and {} are required features.".format(
-        _feature_keys.TrainEvalFeatures.TIMES,
-        _feature_keys.TrainEvalFeatures.VALUES))
+    raise ValueError(
+        f"{_feature_keys.TrainEvalFeatures.TIMES} and {_feature_keys.TrainEvalFeatures.VALUES} are required features."
+    )
   times = features[_feature_keys.TrainEvalFeatures.TIMES]
   for key, value in features.items():
     if value.shape[:len(times.shape)] != times.shape:
       raise ValueError(
-          ("All features must have their shapes prefixed by the shape of the"
-           " times feature. Got shape {} for feature '{}', but shape {} for"
-           " '{}'").format(value.shape, key, times.shape,
-                           _feature_keys.TrainEvalFeatures.TIMES))
-  if not times.shape:  # a single example
+          f"All features must have their shapes prefixed by the shape of the times feature. Got shape {value.shape} for feature '{key}', but shape {times.shape} for '{_feature_keys.TrainEvalFeatures.TIMES}'"
+      )
+  if not times.shape:# a single example
     if not features[_feature_keys.TrainEvalFeatures.VALUES].shape:  # univariate
       # Add a feature dimension (with one feature)
       features[_feature_keys.TrainEvalFeatures.VALUES] = features[
           _feature_keys.TrainEvalFeatures.VALUES][..., None]
     elif len(features[_feature_keys.TrainEvalFeatures.VALUES].shape) > 1:
       raise ValueError(
-          ("Got an unexpected number of dimensions for the '{}' feature."
-           " Was expecting at most 1 dimension"
-           " ([number of features]) since '{}' does not "
-           "have a batch or time dimension, but got shape {}").format(
-               _feature_keys.TrainEvalFeatures.VALUES,
-               _feature_keys.TrainEvalFeatures.TIMES,
-               features[_feature_keys.TrainEvalFeatures.VALUES].shape))
+          f"Got an unexpected number of dimensions for the '{_feature_keys.TrainEvalFeatures.VALUES}' feature. Was expecting at most 1 dimension ([number of features]) since '{_feature_keys.TrainEvalFeatures.TIMES}' does not have a batch or time dimension, but got shape {features[_feature_keys.TrainEvalFeatures.VALUES].shape}"
+      )
     # Add trivial batch and time dimensions for every feature
     features = {key: value[None, None, ...] for key, value in features.items()}
-  if len(times.shape) == 1:  # shape [series length]
+  if len(times.shape) == 1:# shape [series length]
     if len(features[_feature_keys.TrainEvalFeatures.VALUES].shape
           ) == 1:  # shape [series length]
       # Add a feature dimension (with one feature)
@@ -95,25 +88,18 @@ def _canonicalize_numpy_data(data, require_single_batch):
           _feature_keys.TrainEvalFeatures.VALUES][..., None]
     elif len(features[_feature_keys.TrainEvalFeatures.VALUES].shape) > 2:
       raise ValueError(
-          ("Got an unexpected number of dimensions for the '{}' feature."
-           " Was expecting at most 2 dimensions"
-           " ([series length, number of features]) since '{}' does not "
-           "have a batch dimension, but got shape {}").format(
-               _feature_keys.TrainEvalFeatures.VALUES,
-               _feature_keys.TrainEvalFeatures.TIMES,
-               features[_feature_keys.TrainEvalFeatures.VALUES].shape))
+          f"Got an unexpected number of dimensions for the '{_feature_keys.TrainEvalFeatures.VALUES}' feature. Was expecting at most 2 dimensions ([series length, number of features]) since '{_feature_keys.TrainEvalFeatures.TIMES}' does not have a batch dimension, but got shape {features[_feature_keys.TrainEvalFeatures.VALUES].shape}"
+      )
     # Add trivial batch dimensions for every feature
     features = {key: value[None, ...] for key, value in features.items()}
   elif len(features[_feature_keys.TrainEvalFeatures.TIMES].shape
-          ) != 2:  # shape [batch size, series length]
+          ) != 2:# shape [batch size, series length]
     raise ValueError(
-        ("Got an unexpected number of dimensions for times. Was expecting at "
-         "most two ([batch size, series length]), but got shape {}.").format(
-             times.shape))
-  if require_single_batch:
-    # We don't expect input to be already batched; batching is done later
-    if features[_feature_keys.TrainEvalFeatures.TIMES].shape[0] != 1:
-      raise ValueError("Got batch input, was expecting unbatched input.")
+        f"Got an unexpected number of dimensions for times. Was expecting at most two ([batch size, series length]), but got shape {times.shape}."
+    )
+  if (require_single_batch
+      and features[_feature_keys.TrainEvalFeatures.TIMES].shape[0] != 1):
+    raise ValueError("Got batch input, was expecting unbatched input.")
   return features
 
 
@@ -138,9 +124,10 @@ def _colate_features_to_feeds_and_fetches(signature,
       output_key: graph.as_graph_element(output_value.name)
       for output_key, output_value in signature.outputs.items()
   }
-  feed_dict = {}
-  for state_key, state_value in state_values.items():
-    feed_dict[input_feed_tensors_by_name[state_key]] = state_value
+  feed_dict = {
+      input_feed_tensors_by_name[state_key]: state_value
+      for state_key, state_value in state_values.items()
+  }
   for feature_key, feature_value in features.items():
     feed_dict[input_feed_tensors_by_name[feature_key]] = feature_value
   return output_tensors_by_name, feed_dict
@@ -190,7 +177,7 @@ def predict_continuation(continue_from,
   predict_times = _model_utils.canonicalize_times_or_steps_from_output(
       times=times, steps=steps, previous_model_output=continue_from)
   features = {_feature_keys.PredictionFeatures.TIMES: predict_times}
-  features.update(exogenous_features)
+  features |= exogenous_features
   predict_signature = signatures.signature_def[
       _feature_keys.SavedModelLabels.PREDICT]
   output_tensors_by_name, feed_dict = _colate_features_to_feeds_and_fetches(

@@ -63,9 +63,8 @@ def _single_rnn_cell(units, cell_type):
   cell_type = _CELL_TYPES.get(cell_type, cell_type)
   if not callable(cell_type):
     raise ValueError(
-        '`cell_type` should be a class producing a RNN cell, or a string '
-        'specifying the cell type. Supported strings are: {}.'.format(
-            [_SIMPLE_RNN_KEY, _LSTM_KEY, _GRU_KEY]))
+        f'`cell_type` should be a class producing a RNN cell, or a string specifying the cell type. Supported strings are: {[_SIMPLE_RNN_KEY, _LSTM_KEY, _GRU_KEY]}.'
+    )
   cell = cell_type(units=units)
   if hasattr(cell, '_enable_caching_device'):
     # Enable the caching_device to speed up the repeative varaible read in
@@ -93,9 +92,7 @@ def _make_rnn_cell_fn(units, cell_type=_SIMPLE_RNN_KEY):
 
   def rnn_cell_fn():
     cells = [_single_rnn_cell(n, cell_type) for n in units]
-    if len(cells) == 1:
-      return cells[0]
-    return cells
+    return cells[0] if len(cells) == 1 else cells
 
   return rnn_cell_fn
 
@@ -160,8 +157,7 @@ class RNNModel(tf.keras.models.Model):
     """
     super(RNNModel, self).__init__(**kwargs)
     if not isinstance(units, int):
-      raise ValueError('units must be an int.  Given type: {}'.format(
-          type(units)))
+      raise ValueError(f'units must be an int.  Given type: {type(units)}')
     self._return_sequences = return_sequences
     self._sequence_feature_columns = sequence_feature_columns
     self._context_feature_columns = context_feature_columns
@@ -193,8 +189,9 @@ class RNNModel(tf.keras.models.Model):
       (batch_size, logits_size) otherwise.
     """
     if not isinstance(inputs, dict):
-      raise ValueError('inputs should be a dictionary of `Tensor`s. '
-                       'Given type: {}'.format(type(inputs)))
+      raise ValueError(
+          f'inputs should be a dictionary of `Tensor`s. Given type: {type(inputs)}'
+      )
     with ops.name_scope('sequence_input_layer'):
       try:
         sequence_input, sequence_length = self._sequence_features_layer(
@@ -224,10 +221,12 @@ class RNNModel(tf.keras.models.Model):
 
   def get_config(self):
     """Returns a dictionary with the config of the model."""
-    config = {'name': self.name}
-    config['rnn_layer'] = {
-        'class_name': self._rnn_layer.__class__.__name__,
-        'config': self._rnn_layer.get_config()
+    config = {
+        'name': self.name,
+        'rnn_layer': {
+            'class_name': self._rnn_layer.__class__.__name__,
+            'config': self._rnn_layer.get_config(),
+        },
     }
     config['units'] = self._logits_layer.units
     config['return_sequences'] = self._return_sequences

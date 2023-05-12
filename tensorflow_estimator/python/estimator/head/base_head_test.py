@@ -252,6 +252,8 @@ class CreateEstimatorSpecTest(tf.test.TestCase):
     labels = np.array(((1,), (1,),), dtype=np.float64)
     features = {'x': np.array(((42,),), dtype=np.float32)}
 
+
+
     class _Optimizer(tf.keras.optimizers.Optimizer):
 
       def init(self, name, **kwargs):
@@ -265,12 +267,12 @@ class CreateEstimatorSpecTest(tf.test.TestCase):
         return [variable]
 
       def get_config(self):
-        config = super(_Optimizer, self).get_config()
-        return config
+        return super(_Optimizer, self).get_config()
+
 
     # Create estimator spec.
     optimizer = _Optimizer('my_optimizer')
-    old_opt_variable_name_prefix = 'training/' + optimizer.__class__.__name__
+    old_opt_variable_name_prefix = f'training/{optimizer.__class__.__name__}'
     spec = head.create_estimator_spec(
         features=features,
         mode=ModeKeys.TRAIN,

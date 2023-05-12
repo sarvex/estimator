@@ -14,6 +14,7 @@
 # ==============================================================================
 """Base Estimator class."""
 
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -56,8 +57,14 @@ from tensorflow_estimator.python.estimator import util as estimator_util
 from tensorflow_estimator.python.estimator.export import export_lib
 from tensorflow_estimator.python.estimator.mode_keys import ModeKeys
 
-_VALID_MODEL_FN_ARGS = set(
-    ['features', 'labels', 'mode', 'params', 'self', 'config'])
+_VALID_MODEL_FN_ARGS = {
+    'features',
+    'labels',
+    'mode',
+    'params',
+    'self',
+    'config',
+}
 _estimator_api_gauge = monitoring.BoolGauge('/tensorflow/api/estimator',
                                             'estimator api usage', 'method')
 
@@ -333,19 +340,16 @@ class Estimator(object):
     if self.config.task_type in (run_config.TaskType.EVALUATOR,
                                  run_config.TaskType.PS):
       raise ValueError(
-          'Train has been called wrong configuration. Please use '
-          'tf.estimator.train_and_evaluate which calls proper API according '
-          'to given configuration. Current configuration: {}.'.format(
-              self.config))
+          f'Train has been called wrong configuration. Please use tf.estimator.train_and_evaluate which calls proper API according to given configuration. Current configuration: {self.config}.'
+      )
 
     with context.graph_mode():
       if (steps is not None) and (max_steps is not None):
         raise ValueError('Can not provide both steps and max_steps.')
       if steps is not None and steps <= 0:
-        raise ValueError('Must specify steps > 0, given: {}'.format(steps))
+        raise ValueError(f'Must specify steps > 0, given: {steps}')
       if max_steps is not None and max_steps <= 0:
-        raise ValueError(
-            'Must specify max_steps > 0, given: {}'.format(max_steps))
+        raise ValueError(f'Must specify max_steps > 0, given: {max_steps}')
 
       if max_steps is not None:
         start_step = _load_global_step_from_checkpoint_dir(self._model_dir)
@@ -373,18 +377,17 @@ class Estimator(object):
     Returns:
       List of hooks to be passed to the estimator.
     """
-    if steps is not None or max_steps is not None:
-      if self._train_distribution:
-        steps_per_run = getattr(self._train_distribution.extended,
-                                'steps_per_run', 1)
-        if steps_per_run > 1:
-          return [
-              basic_session_run_hooks._MultiStepStopAtStepHook(  # pylint: disable=protected-access
-                  steps, max_steps, steps_per_run)
-          ]
-      return [tf.compat.v1.train.StopAtStepHook(steps, max_steps)]
-    else:
+    if steps is None and max_steps is None:
       return []
+    if self._train_distribution:
+      steps_per_run = getattr(self._train_distribution.extended,
+                              'steps_per_run', 1)
+      if steps_per_run > 1:
+        return [
+            basic_session_run_hooks._MultiStepStopAtStepHook(  # pylint: disable=protected-access
+                steps, max_steps, steps_per_run)
+        ]
+    return [tf.compat.v1.train.StopAtStepHook(steps, max_steps)]
 
   def eval_dir(self, name=None):
     """Shows the directory name where evaluation metrics are dumped.
@@ -398,7 +401,7 @@ class Estimator(object):
     Returns:
       A string which is the path of directory contains evaluation metrics.
     """
-    return os.path.join(self._model_dir, 'eval' if not name else 'eval_' + name)
+    return os.path.join(self._model_dir, 'eval' if not name else f'eval_{name}')
 
   def evaluate(self,
                input_fn,
@@ -536,7 +539,7 @@ class Estimator(object):
       return []
 
     if steps <= 0:
-      raise ValueError('Must specify steps > 0, given: {}'.format(steps))
+      raise ValueError(f'Must specify steps > 0, given: {steps}')
 
     # The hooks are declared as private in evaluation.py discourage the use
     # by other libraries or open source users. This should be the only usage
@@ -613,8 +616,8 @@ class Estimator(object):
             self._model_dir)
       if not checkpoint_path:
         tf.compat.v1.logging.info(
-            'Could not find trained model in model_dir: {}, running '
-            'initialization to predict.'.format(self._model_dir))
+            f'Could not find trained model in model_dir: {self._model_dir}, running initialization to predict.'
+        )
       with tf.Graph().as_default() as g:
         tf.compat.v1.random.set_random_seed(self._config.tf_random_seed)
         self._create_and_assert_global_step(g)
@@ -632,19 +635,18 @@ class Estimator(object):
         all_hooks.extend(hooks)
         all_hooks.extend(list(estimator_spec.prediction_hooks or []))
         with tf.compat.v1.train.MonitoredSession(
-            session_creator=tf.compat.v1.train.ChiefSessionCreator(
-                checkpoint_filename_with_path=checkpoint_path,
-                master=self._config.master,
-                scaffold=estimator_spec.scaffold,
-                config=self._session_config),
-            hooks=all_hooks) as mon_sess:
+                  session_creator=tf.compat.v1.train.ChiefSessionCreator(
+                      checkpoint_filename_with_path=checkpoint_path,
+                      master=self._config.master,
+                      scaffold=estimator_spec.scaffold,
+                      config=self._session_config),
+                  hooks=all_hooks) as mon_sess:
           while not mon_sess.should_stop():
             preds_evaluated = mon_sess.run(predictions)
             if not yield_single_examples:
               yield preds_evaluated
             elif not isinstance(predictions, dict):
-              for pred in preds_evaluated:
-                yield pred
+              yield from preds_evaluated
             else:
               for i in range(self._extract_batch_length(preds_evaluated)):
                 yield {
@@ -823,14 +825,12 @@ class Estimator(object):
         # Locate the latest checkpoint
         checkpoint_path = self.latest_checkpoint()
       if not checkpoint_path:
-        if self._warm_start_settings:
-          checkpoint_path = self._warm_start_settings.ckpt_to_initialize_from
-          if tf.compat.v1.gfile.IsDirectory(checkpoint_path):
-            checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
-        else:
-          raise ValueError("Couldn't find trained model at {}.".format(
-              self._model_dir))
+        if not self._warm_start_settings:
+          raise ValueError(f"Couldn't find trained model at {self._model_dir}.")
 
+        checkpoint_path = self._warm_start_settings.ckpt_to_initialize_from
+        if tf.compat.v1.gfile.IsDirectory(checkpoint_path):
+          checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
       export_dir = export_lib.get_timestamped_export_dir(export_dir_base)
       temp_export_dir = export_lib.get_temp_export_dir(export_dir)
 
@@ -871,8 +871,9 @@ class Estimator(object):
         save_variables = False
 
       if save_variables:
-        raise ValueError('No valid modes for exporting found. Got {}.'.format(
-            input_receiver_fn_map.keys()))
+        raise ValueError(
+            f'No valid modes for exporting found. Got {input_receiver_fn_map.keys()}.'
+        )
 
       builder.save(as_text)
 
@@ -986,12 +987,7 @@ class Estimator(object):
           try:
             graph_saver.restore(session, checkpoint_path)
           except tf.errors.NotFoundError as e:
-            msg = ('Could not load all requested variables from checkpoint. '
-                   'Please make sure your model_fn does not expect variables '
-                   'that were not saved in the checkpoint.\n\n'
-                   'Encountered error with mode `{}` while restoring '
-                   'checkpoint from: `{}`. Full Traceback:\n\n{}').format(
-                       mode, checkpoint_path, e)
+            msg = f'Could not load all requested variables from checkpoint. Please make sure your model_fn does not expect variables that were not saved in the checkpoint.\n\nEncountered error with mode `{mode}` while restoring checkpoint from: `{checkpoint_path}`. Full Traceback:\n\n{e}'
             raise ValueError(msg)
 
         # We add the train op explicitly for now, so that we don't have to
@@ -1065,15 +1061,15 @@ class Estimator(object):
       raise ValueError(
           'predict_keys argument is not valid in case of non-dict predictions.')
     existing_keys = predictions.keys()
-    predictions = {
+    if predictions := {
         key: value
-        for key, value in six.iteritems(predictions)
-        if key in predict_keys
-    }
-    if not predictions:
-      raise ValueError('Expected to run at least one output from %s, '
-                       'provided %s.' % (existing_keys, predict_keys))
-    return predictions
+        for key, value in six.iteritems(predictions) if key in predict_keys
+    }:
+      return predictions
+    else:
+      raise ValueError(
+          f'Expected to run at least one output from {existing_keys}, provided {predict_keys}.'
+      )
 
   def _create_global_step(self, graph):
     """Creates the global step tensor in graph.
@@ -1159,10 +1155,9 @@ class Estimator(object):
     kwargs = {}
     if 'labels' in model_fn_args:
       kwargs['labels'] = labels
-    else:
-      if labels is not None:
-        raise ValueError(
-            'model_fn does not take labels, but input_fn returns labels.')
+    elif labels is not None:
+      raise ValueError(
+          'model_fn does not take labels, but input_fn returns labels.')
     if 'mode' in model_fn_args:
       kwargs['mode'] = mode
     if 'params' in model_fn_args:
@@ -1398,16 +1393,15 @@ class Estimator(object):
     """Train a model with the given Estimator Spec."""
     if (self._warm_start_settings and
         not tf.train.latest_checkpoint(self._model_dir)):
-      tf.compat.v1.logging.info('Warm-starting with WarmStartSettings: %s' %
-                                (self._warm_start_settings,))
+      tf.compat.v1.logging.info(
+          f'Warm-starting with WarmStartSettings: {self._warm_start_settings}')
       tf.compat.v1.train.warm_start(*self._warm_start_settings)
     # Check if the user created a loss summary, and add one if they didn't.
     # We assume here that the summary is called 'loss'. If it is not, we will
     # make another one with the name 'loss' to ensure it shows up in the right
     # graph in TensorBoard.
-    if not any([
-        x.op.name == 'loss' for x in ops.get_collection(ops.GraphKeys.SUMMARIES)
-    ]):
+    if all(x.op.name != 'loss'
+           for x in ops.get_collection(ops.GraphKeys.SUMMARIES)):
       summary.scalar('loss', estimator_spec.loss)
     ops.add_to_collection(ops.GraphKeys.LOSSES, estimator_spec.loss)
     worker_hooks.extend(hooks)
@@ -1422,8 +1416,8 @@ class Estimator(object):
               every_n_iter=self._config.log_step_count_steps))
     worker_hooks.extend(estimator_spec.training_hooks)
 
-    if not (estimator_spec.scaffold.saver or
-            tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.SAVERS)):
+    if not estimator_spec.scaffold.saver and not tf.compat.v1.get_collection(
+        tf.compat.v1.GraphKeys.SAVERS):
       tf.compat.v1.add_to_collection(
           tf.compat.v1.GraphKeys.SAVERS,
           tf.compat.v1.train.Saver(
@@ -1447,32 +1441,30 @@ class Estimator(object):
         h for h in all_hooks
         if isinstance(h, tf.compat.v1.train.CheckpointSaverHook)
     ]
-    if (self._config.save_checkpoints_secs or
-        self._config.save_checkpoints_steps):
-      if not saver_hooks:
-        chief_hooks = [
-            tf.compat.v1.train.CheckpointSaverHook(
-                self._model_dir,
-                save_secs=self._config.save_checkpoints_secs,
-                save_steps=self._config.save_checkpoints_steps,
-                scaffold=estimator_spec.scaffold,
-                save_graph_def=self._config.checkpoint_save_graph_def)
-        ]
-        saver_hooks = [chief_hooks[0]]
+    if (self._config.save_checkpoints_secs
+        or self._config.save_checkpoints_steps) and not saver_hooks:
+      chief_hooks = [
+          tf.compat.v1.train.CheckpointSaverHook(
+              self._model_dir,
+              save_secs=self._config.save_checkpoints_secs,
+              save_steps=self._config.save_checkpoints_steps,
+              scaffold=estimator_spec.scaffold,
+              save_graph_def=self._config.checkpoint_save_graph_def)
+      ]
+      saver_hooks = [chief_hooks[0]]
     if saving_listeners:
       if not saver_hooks:
         raise ValueError(
             'There should be a CheckpointSaverHook to use saving_listeners. '
             'Please set one of the RunConfig.save_checkpoints_steps or '
             'RunConfig.save_checkpoints_secs.')
-      else:
-        # It is expected to have one CheckpointSaverHook. If multiple, we pick
-        # up the first one to add listener.
-        for listener in saving_listeners:
-          # pylint: disable=protected-access
-          if listener not in saver_hooks[0]._listeners:
-            saver_hooks[0]._listeners.append(listener)
-          # pylint: disable=protected-access
+      # It is expected to have one CheckpointSaverHook. If multiple, we pick
+      # up the first one to add listener.
+      for listener in saving_listeners:
+        # pylint: disable=protected-access
+        if listener not in saver_hooks[0]._listeners:
+          saver_hooks[0]._listeners.append(listener)
+        # pylint: disable=protected-access
 
     # Add summary hooks to worker 0 if we are running with a master, to ensure
     # that summaries are written at correct intervals even with long-running
@@ -1681,8 +1673,8 @@ class Estimator(object):
 
   def _maybe_warm_start(self, checkpoint_path):
     if not checkpoint_path and self._warm_start_settings:
-      tf.compat.v1.logging.info('Warm-starting with WarmStartSettings: %s' %
-                                (self._warm_start_settings,))
+      tf.compat.v1.logging.info(
+          f'Warm-starting with WarmStartSettings: {self._warm_start_settings}')
       tf.compat.v1.train.warm_start(*self._warm_start_settings)
 
   @deprecation.deprecated(
@@ -1788,32 +1780,37 @@ def _assert_members_are_not_overridden(cls, obj):
   if obj.__class__.__name__ == 'TPUEstimator':
     return
 
-  allowed_overrides = set([
-      'model_fn', '_create_and_assert_global_step', '_export_all_saved_models',
-      '_tf_api_names', '_tf_api_names_v1', '_estimator_api_names',
-      '_estimator_api_names_v1', '_estimator_api_constants',
-      '_estimator_api_constants_v1', 'latest_checkpoint'
-  ])
+  allowed_overrides = {
+      'model_fn',
+      '_create_and_assert_global_step',
+      '_export_all_saved_models',
+      '_tf_api_names',
+      '_tf_api_names_v1',
+      '_estimator_api_names',
+      '_estimator_api_names_v1',
+      '_estimator_api_constants',
+      '_estimator_api_constants_v1',
+      'latest_checkpoint',
+  }
 
-  estimator_members = set([m for m in dir(cls) if not m.startswith('__')])
+  estimator_members = {m for m in dir(cls) if not m.startswith('__')}
   subclass_members = set(obj.__class__.__dict__.keys())
   common_members = estimator_members & subclass_members - allowed_overrides
-  overridden_members = [
-      m for m in common_members if getattr(cls, m) != getattr(obj.__class__, m)
-  ]
-  if overridden_members:
+  if overridden_members := [
+      m for m in common_members
+      if getattr(cls, m) != getattr(obj.__class__, m)
+  ]:
     raise ValueError(
-        'Subclasses of Estimator cannot override members of Estimator. '
-        '{} does override {}'.format(obj.__class__, overridden_members))
+        f'Subclasses of Estimator cannot override members of Estimator. {obj.__class__} does override {overridden_members}'
+    )
 
 
 def _verify_and_create_loss_metric(eval_metric_ops, loss, distribution=None):
   """Creates a metric for loss and throws an error if one already exists."""
   if model_fn_lib.LOSS_METRIC_KEY in eval_metric_ops:
     raise ValueError(
-        'Metric with name "%s" is not allowed, because Estimator ' %
-        (model_fn_lib.LOSS_METRIC_KEY) +
-        'already defines a default metric with the same name.')
+        f'Metric with name "{model_fn_lib.LOSS_METRIC_KEY}" is not allowed, because Estimator already defines a default metric with the same name.'
+    )
 
   if distribution is None:
     loss_metric = tf.compat.v1.metrics.mean(loss)
@@ -1843,20 +1840,18 @@ def maybe_overwrite_model_dir_and_session_config(config, model_dir):
     tf.compat.v1.logging.info('Using default config.')
   if not isinstance(config, run_config.RunConfig):
     raise ValueError(
-        'config must be an instance of `RunConfig`, but provided %s.' % config)
+        f'config must be an instance of `RunConfig`, but provided {config}.')
 
   if config.session_config is None:
     session_config = run_config.get_default_session_config()
     config = run_config.RunConfig.replace(config, session_config=session_config)
 
   model_dir = compat_internal.path_to_str(model_dir)
-  if model_dir is not None:
-    if (getattr(config, 'model_dir', None) is not None and
-        config.model_dir != model_dir):
-      raise ValueError(
-          '`model_dir` are set both in constructor and `RunConfig`, but with '
-          "different values. In constructor: '{}', in `RunConfig`: "
-          "'{}' ".format(model_dir, config.model_dir))
+  if model_dir is not None and (getattr(config, 'model_dir', None) is not None
+                                and config.model_dir != model_dir):
+    raise ValueError(
+        f"`model_dir` are set both in constructor and `RunConfig`, but with different values. In constructor: '{model_dir}', in `RunConfig`: '{config.model_dir}' "
+    )
   if model_dir:
     config = run_config.RunConfig.replace(config, model_dir=model_dir)
   elif getattr(config, 'model_dir', None) is None:
@@ -1891,30 +1886,16 @@ def _combine_distributed_scaffold(grouped_scaffold, distribution):
   init_feed_dict = [
       s.init_feed_dict for s in scaffold_list if s.init_feed_dict is not None
   ]
-  if init_feed_dict:
-    init_feed_dict = distribution.group(init_feed_dict)
-  else:
-    init_feed_dict = None
-
+  init_feed_dict = distribution.group(init_feed_dict) if init_feed_dict else None
   init_fn = [
       s._user_init_fn for s in scaffold_list if s._user_init_fn is not None  # pylint: disable=protected-access
   ]
-  if init_fn:
-    init_fn = init_fn[0]
-  else:
-    init_fn = None
-
+  init_fn = init_fn[0] if init_fn else None
   init_op = [s.init_op for s in scaffold_list if s.init_op is not None]
-  if init_op:
-    init_op = distribution.group(init_op)
-  else:
-    init_op = None
-
+  init_op = distribution.group(init_op) if init_op else None
   def _unwrap_and_concat(value):
     value = tf.nest.flatten(distribution.experimental_local_results(value))
-    if len(value) != 1:
-      return tf.concat(value, 0)
-    return value[0]
+    return tf.concat(value, 0) if len(value) != 1 else value[0]
 
   ready_op = distribution.extended.call_for_each_replica(
       lambda scaffold: scaffold.ready_op, args=(grouped_scaffold,))
@@ -1931,23 +1912,11 @@ def _combine_distributed_scaffold(grouped_scaffold, distribution):
   local_init_op = [
       s.local_init_op for s in scaffold_list if s.local_init_op is not None
   ]
-  if local_init_op:
-    local_init_op = distribution.group(local_init_op)
-  else:
-    local_init_op = None
-
+  local_init_op = distribution.group(local_init_op) if local_init_op else None
   summary_op = [s.summary_op for s in scaffold_list if s.summary_op is not None]
-  if summary_op:
-    summary_op = distribution.group(summary_op)
-  else:
-    summary_op = None
-
+  summary_op = distribution.group(summary_op) if summary_op else None
   savers = [s.saver for s in scaffold_list if s.saver is not None]
-  if savers:
-    saver = savers[0]
-  else:
-    saver = None
-
+  saver = savers[0] if savers else None
   scaffold = tf.compat.v1.train.Scaffold(
       init_op=init_op,
       ready_op=ready_op,
@@ -1963,8 +1932,7 @@ def _combine_distributed_scaffold(grouped_scaffold, distribution):
 def _check_checkpoint_available(model_dir):
   latest_path = tf.train.latest_checkpoint(model_dir)
   if not latest_path:
-    raise ValueError(
-        'Could not find trained model in model_dir: {}.'.format(model_dir))
+    raise ValueError(f'Could not find trained model in model_dir: {model_dir}.')
 
 
 def _check_hooks_type(hooks):
@@ -1972,7 +1940,7 @@ def _check_hooks_type(hooks):
   hooks = list(hooks or [])
   for h in hooks:
     if not isinstance(h, tf.compat.v1.train.SessionRunHook):
-      raise TypeError('Hooks must be a SessionRunHook, given: {}'.format(h))
+      raise TypeError(f'Hooks must be a SessionRunHook, given: {h}')
   return hooks
 
 
@@ -1982,8 +1950,8 @@ def _check_listeners_type(saving_listeners):
   for l in listeners:
     if not isinstance(l, tf.compat.v1.train.CheckpointSaverListener):
       raise TypeError(
-          'saving_listeners must be a list of CheckpointSaverListener, '
-          'given: {}'.format(l))
+          f'saving_listeners must be a list of CheckpointSaverListener, given: {l}'
+      )
   return listeners
 
 
@@ -2000,39 +1968,35 @@ def _get_replica_device_setter(config):
   Returns:
     A replica device setter, or `None`.
   """
-  if config.task_type:
-    worker_device = '/job:%s/task:%d' % (config.task_type, config.task_id)
-  else:
-    worker_device = '/job:worker'
-
-  if config.num_ps_replicas > 0:
-    return tf.compat.v1.train.replica_device_setter(
-        ps_tasks=config.num_ps_replicas,
-        worker_device=worker_device,
-        merge_devices=True,
-        ps_ops=list(device_setter.STANDARD_PS_OPS),
-        cluster=config.cluster_spec)
-  else:
+  if config.num_ps_replicas <= 0:
     return None
+  worker_device = ('/job:%s/task:%d' % (config.task_type, config.task_id)
+                   if config.task_type else '/job:worker')
+  return tf.compat.v1.train.replica_device_setter(
+      ps_tasks=config.num_ps_replicas,
+      worker_device=worker_device,
+      merge_devices=True,
+      ps_ops=list(device_setter.STANDARD_PS_OPS),
+      cluster=config.cluster_spec)
 
 
 def _verify_model_fn_args(model_fn, params):
   """Verifies `model_fn` arguments."""
   args = set(function_utils.fn_args(model_fn))
   if 'features' not in args:
-    raise ValueError('model_fn (%s) must include features argument.' % model_fn)
+    raise ValueError(f'model_fn ({model_fn}) must include features argument.')
   if params is not None and 'params' not in args:
-    raise ValueError('model_fn (%s) does not include params argument, '
-                     'but params (%s) is passed to Estimator.' %
-                     (model_fn, params))
+    raise ValueError(
+        f'model_fn ({model_fn}) does not include params argument, but params ({params}) is passed to Estimator.'
+    )
   if params is None and 'params' in args:
     tf.compat.v1.logging.warn(
         'Estimator\'s model_fn (%s) includes params '
         'argument, but params are not passed to Estimator.', model_fn)
-  non_valid_args = list(args - _VALID_MODEL_FN_ARGS)
-  if non_valid_args:
-    raise ValueError('model_fn (%s) has following not expected args: %s' %
-                     (model_fn, non_valid_args))
+  if non_valid_args := list(args - _VALID_MODEL_FN_ARGS):
+    raise ValueError(
+        f'model_fn ({model_fn}) has following not expected args: {non_valid_args}'
+    )
 
 
 def _load_global_step_from_checkpoint_dir(checkpoint_dir):
@@ -2067,8 +2031,7 @@ def _dict_to_str(dictionary):
   Returns:
     A `str` representing the `dictionary`.
   """
-  return ', '.join('%s = %s' % (k, v)
-                   for k, v in sorted(six.iteritems(dictionary))
+  return ', '.join(f'{k} = {v}' for k, v in sorted(six.iteritems(dictionary))
                    if not isinstance(v, six.binary_type))
 
 
@@ -2089,12 +2052,9 @@ def _write_dict_to_summary(output_dir, dictionary, current_global_step):
       continue
     if key == 'global_step':
       continue
-    if (isinstance(dictionary[key], np.float32) or
-        isinstance(dictionary[key], float)):
+    if isinstance(dictionary[key], (np.float32, float)):
       summary_proto.value.add(tag=key, simple_value=float(dictionary[key]))
-    elif (isinstance(dictionary[key], np.int64) or
-          isinstance(dictionary[key], np.int32) or
-          isinstance(dictionary[key], int)):
+    elif isinstance(dictionary[key], (np.int64, np.int32, int)):
       summary_proto.value.add(tag=key, simple_value=int(dictionary[key]))
     elif isinstance(dictionary[key], six.binary_type):
       try:
@@ -2159,7 +2119,7 @@ def _has_dataset_or_queue_runner(maybe_tensor):
   tensors = [
       x for x in tf.nest.flatten(maybe_tensor) if isinstance(x, tf.Tensor)
   ]
-  if any([t.op.type == 'IteratorGetNext' for t in tensors]):
+  if any(t.op.type == 'IteratorGetNext' for t in tensors):
     return True
 
   # Now, check queue.
@@ -2403,5 +2363,6 @@ def _get_default_warm_start_settings(warm_start_from):
   elif isinstance(warm_start_from, WarmStartSettings):
     return warm_start_from
   else:
-    raise ValueError('warm_start_from must be a string or a WarmStartSettings, '
-                     'instead got {}'.format(type(warm_start_from)))
+    raise ValueError(
+        f'warm_start_from must be a string or a WarmStartSettings, instead got {type(warm_start_from)}'
+    )

@@ -143,13 +143,12 @@ class MultiClassHead(base_head.Head):
     if label_vocabulary is not None and not isinstance(label_vocabulary,
                                                        (list, tuple)):
       raise ValueError(
-          'label_vocabulary should be a list or a tuple. Given type: {}'.format(
-              type(label_vocabulary)))
+          f'label_vocabulary should be a list or a tuple. Given type: {type(label_vocabulary)}'
+      )
     if label_vocabulary is not None and len(label_vocabulary) != n_classes:
       raise ValueError(
-          '"label_vocabulary" does not have "n_classes" items. '
-          'len(label_vocabulary)={}, n_classes={}, label_vocabulary={}'.format(
-              len(label_vocabulary), n_classes, label_vocabulary))
+          f'"label_vocabulary" does not have "n_classes" items. len(label_vocabulary)={len(label_vocabulary)}, n_classes={n_classes}, label_vocabulary={label_vocabulary}'
+      )
     base_head.validate_loss_reduction(loss_reduction)
     if loss_fn:
       base_head.validate_loss_fn_args(loss_fn)
@@ -229,14 +228,14 @@ class MultiClassHead(base_head.Head):
     if self._label_vocabulary is None:
       if not labels.dtype.is_integer:
         raise ValueError(
-            'Labels dtype should be integer. Instead got {}.'.format(
-                labels.dtype))
+            f'Labels dtype should be integer. Instead got {labels.dtype}.')
       label_ids = labels
-    else:
-      if labels.dtype != tf.dtypes.string:
-        raise ValueError('Labels dtype should be string if there is a '
-                         'vocabulary. Instead got {}'.format(labels.dtype))
+    elif labels.dtype == tf.dtypes.string:
       label_ids = self._class_id_table.lookup(labels)
+    else:
+      raise ValueError(
+          f'Labels dtype should be string if there is a vocabulary. Instead got {labels.dtype}'
+      )
     return base_head.check_label_range(label_ids, self._n_classes)
 
   def _unweighted_loss_and_weights(self, logits, label_ids, features):
@@ -324,14 +323,14 @@ class MultiClassHead(base_head.Head):
             logits, axis=-1, name=pred_keys.CLASS_IDS)
         # Expand to [batch_size, 1].
         class_ids = tf.compat.v1.expand_dims(class_ids, axis=-1)
-        if pred_keys.CLASS_IDS in keys:
-          predictions[pred_keys.CLASS_IDS] = class_ids
-        if pred_keys.CLASSES in keys:
-          if self._label_vocabulary:
-            classes = self._class_string_table.lookup(class_ids)
-          else:
-            classes = tf.strings.as_string(class_ids, name='str_classes')
-          predictions[pred_keys.CLASSES] = classes
+      if pred_keys.CLASS_IDS in keys:
+        predictions[pred_keys.CLASS_IDS] = class_ids
+      if pred_keys.CLASSES in keys:
+        if self._label_vocabulary:
+          classes = self._class_string_table.lookup(class_ids)
+        else:
+          classes = tf.strings.as_string(class_ids, name='str_classes')
+        predictions[pred_keys.CLASSES] = classes
       if pred_keys.ALL_CLASS_IDS in keys:
         predictions[pred_keys.ALL_CLASS_IDS] = base_head.all_class_ids(
             logits, n_classes=self._n_classes)
@@ -347,9 +346,9 @@ class MultiClassHead(base_head.Head):
     keys = metric_keys.MetricKeys
     with ops.name_scope('metrics', values=(regularization_losses,)):
       # Mean metric.
-      eval_metrics = {}
-      eval_metrics[self._loss_mean_key] = tf.keras.metrics.Mean(
-          name=keys.LOSS_MEAN)
+      eval_metrics = {
+          self._loss_mean_key: tf.keras.metrics.Mean(name=keys.LOSS_MEAN)
+      }
       if regularization_losses is not None:
         eval_metrics[self._loss_regularization_key] = tf.keras.metrics.Mean(
             name=keys.LOSS_REGULARIZATION)

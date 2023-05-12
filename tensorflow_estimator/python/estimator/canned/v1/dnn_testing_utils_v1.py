@@ -129,13 +129,17 @@ def create_checkpoint(weights_and_biases,
 
 def mock_head(testcase, hidden_units, logits_dimension, expected_logits):
   """Returns a mock head that validates logits values and variable names."""
-  hidden_weights_names = [(HIDDEN_WEIGHTS_NAME_PATTERN + '/part_0:0') % i
-                          for i in range(len(hidden_units))]
-  hidden_biases_names = [(HIDDEN_BIASES_NAME_PATTERN + '/part_0:0') % i
-                         for i in range(len(hidden_units))]
+  hidden_weights_names = [
+      f'{HIDDEN_WEIGHTS_NAME_PATTERN}/part_0:0' % i
+      for i in range(len(hidden_units))
+  ]
+  hidden_biases_names = [
+      f'{HIDDEN_BIASES_NAME_PATTERN}/part_0:0' % i
+      for i in range(len(hidden_units))
+  ]
   expected_var_names = (
       hidden_weights_names + hidden_biases_names +
-      [LOGITS_WEIGHTS_NAME + '/part_0:0', LOGITS_BIASES_NAME + '/part_0:0'])
+      [f'{LOGITS_WEIGHTS_NAME}/part_0:0', f'{LOGITS_BIASES_NAME}/part_0:0'])
 
   def _create_tpu_estimator_spec(features,
                                  mode,
@@ -198,13 +202,17 @@ def mock_optimizer(testcase, hidden_units, expected_loss=None):
   Returns:
     A mock Optimizer.
   """
-  hidden_weights_names = [(HIDDEN_WEIGHTS_NAME_PATTERN + '/part_0:0') % i
-                          for i in range(len(hidden_units))]
-  hidden_biases_names = [(HIDDEN_BIASES_NAME_PATTERN + '/part_0:0') % i
-                         for i in range(len(hidden_units))]
+  hidden_weights_names = [
+      f'{HIDDEN_WEIGHTS_NAME_PATTERN}/part_0:0' % i
+      for i in range(len(hidden_units))
+  ]
+  hidden_biases_names = [
+      f'{HIDDEN_BIASES_NAME_PATTERN}/part_0:0' % i
+      for i in range(len(hidden_units))
+  ]
   expected_var_names = (
       hidden_weights_names + hidden_biases_names +
-      [LOGITS_WEIGHTS_NAME + '/part_0:0', LOGITS_BIASES_NAME + '/part_0:0'])
+      [f'{LOGITS_WEIGHTS_NAME}/part_0:0', f'{LOGITS_BIASES_NAME}/part_0:0'])
 
   def _minimize(loss, global_step=None, var_list=None):
     """Mock of optimizer.minimize."""
@@ -274,7 +282,7 @@ class BaseDNNModelFnTest(object):
           ],
           optimizer=mock_optimizer(self, hidden_units))
       with tf.compat.v1.train.MonitoredTrainingSession(
-          checkpoint_dir=self._model_dir) as sess:
+              checkpoint_dir=self._model_dir) as sess:
         if mode == ModeKeys.TRAIN:
           sess.run(estimator_spec.train_op)
         elif mode == ModeKeys.EVAL:
@@ -282,7 +290,7 @@ class BaseDNNModelFnTest(object):
         elif mode == ModeKeys.PREDICT:
           sess.run(estimator_spec.predictions)
         else:
-          self.fail('Invalid mode: {}'.format(mode))
+          self.fail(f'Invalid mode: {mode}')
 
   def test_one_dim_logits(self):
     """Tests one-dimensional logits.
@@ -453,7 +461,7 @@ class BaseDNNModelFnTest(object):
             ],
             optimizer=mock_optimizer(self, hidden_units))
         with tf.compat.v1.train.MonitoredTrainingSession(
-            checkpoint_dir=self._model_dir) as sess:
+                  checkpoint_dir=self._model_dir) as sess:
           if mode == ModeKeys.TRAIN:
             sess.run(estimator_spec.train_op)
           elif mode == ModeKeys.EVAL:
@@ -461,7 +469,7 @@ class BaseDNNModelFnTest(object):
           elif mode == ModeKeys.PREDICT:
             sess.run(estimator_spec.predictions)
           else:
-            self.fail('Invalid mode: {}'.format(mode))
+            self.fail(f'Invalid mode: {mode}')
 
   def test_multi_feature_column_mix_multi_dim_logits(self):
     """Tests multiple feature columns and multi-dimensional logits.
@@ -504,7 +512,7 @@ class BaseDNNModelFnTest(object):
             ],
             optimizer=mock_optimizer(self, hidden_units))
         with tf.compat.v1.train.MonitoredTrainingSession(
-            checkpoint_dir=self._model_dir) as sess:
+                  checkpoint_dir=self._model_dir) as sess:
           if mode == ModeKeys.TRAIN:
             sess.run(estimator_spec.train_op)
           elif mode == ModeKeys.EVAL:
@@ -512,7 +520,7 @@ class BaseDNNModelFnTest(object):
           elif mode == ModeKeys.PREDICT:
             sess.run(estimator_spec.predictions)
           else:
-            self.fail('Invalid mode: {}'.format(mode))
+            self.fail(f'Invalid mode: {mode}')
 
   def test_features_tensor_raises_value_error(self):
     """Tests that passing a Tensor for features raises a ValueError."""
@@ -1500,14 +1508,15 @@ class BaseDNNClassifierPredictTest(object):
                         predictions[prediction_keys.PredictionKeys.CLASSES])
 
   def test_one_dim_without_label_vocabulary(self):
-    self._test_one_dim(
-        label_vocabulary=None, label_output_fn=lambda x: ('%s' % x).encode())
+    self._test_one_dim(label_vocabulary=None,
+                       label_output_fn=lambda x: f'{x}'.encode())
 
   def test_one_dim_with_label_vocabulary(self):
     n_classes = 2
     self._test_one_dim(
-        label_vocabulary=['class_vocab_{}'.format(i) for i in range(n_classes)],
-        label_output_fn=lambda x: ('class_vocab_%s' % x).encode())
+        label_vocabulary=[f'class_vocab_{i}' for i in range(n_classes)],
+        label_output_fn=lambda x: f'class_vocab_{x}'.encode(),
+    )
 
   def _test_multi_dim_with_3_classes(self, label_vocabulary, label_output_fn):
     """Asserts predictions for multi-dimensional input and logits."""
@@ -1558,13 +1567,14 @@ class BaseDNNClassifierPredictTest(object):
 
   def test_multi_dim_with_3_classes_but_no_label_vocab(self):
     self._test_multi_dim_with_3_classes(
-        label_vocabulary=None, label_output_fn=lambda x: ('%s' % x).encode())
+        label_vocabulary=None, label_output_fn=lambda x: f'{x}'.encode())
 
   def test_multi_dim_with_3_classes_and_label_vocab(self):
     n_classes = 3
     self._test_multi_dim_with_3_classes(
-        label_vocabulary=['class_vocab_{}'.format(i) for i in range(n_classes)],
-        label_output_fn=lambda x: ('class_vocab_%s' % x).encode())
+        label_vocabulary=[f'class_vocab_{i}' for i in range(n_classes)],
+        label_output_fn=lambda x: f'class_vocab_{x}'.encode(),
+    )
 
 
 class BaseDNNRegressorPredictTest(object):
@@ -1667,7 +1677,7 @@ def _assert_checkpoint(testcase, global_step, input_units, hidden_units,
     output_units: The dimension of output layer (logits).
     model_dir: The model directory.
   """
-  shapes = {name: shape for (name, shape) in tf.train.list_variables(model_dir)}
+  shapes = dict(tf.train.list_variables(model_dir))
 
   # Global step.
   testcase.assertEqual([], shapes[tf.compat.v1.GraphKeys.GLOBAL_STEP])

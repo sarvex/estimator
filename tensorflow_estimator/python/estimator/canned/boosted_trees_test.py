@@ -152,7 +152,8 @@ class BoostedTreesEstimatorTest(tf.test.TestCase):
 
     self.assertEqual(
         finalized_trees,
-        sum([1 for t in ensemble_proto.tree_metadata if t.is_finalized]))
+        sum(1 for t in ensemble_proto.tree_metadata if t.is_finalized),
+    )
     self.assertEqual(attempted_layers,
                      ensemble_proto.growing_metadata.num_layers_attempted)
 
@@ -512,8 +513,8 @@ class BoostedTreesEstimatorTest(tf.test.TestCase):
     }
     weights = tf.feature_column.numeric_column(
         'weight', dtype=tf.dtypes.float32)
-    feature_and_weight_dict_weight_1.update(FEATURES_DICT.copy())
-    feature_and_weight_dict_weight_2.update(FEATURES_DICT.copy())
+    feature_and_weight_dict_weight_1 |= FEATURES_DICT.copy()
+    feature_and_weight_dict_weight_2 |= FEATURES_DICT.copy()
     input_fn_1 = numpy_io.numpy_input_fn(
         x=feature_and_weight_dict_weight_1,
         y=np.array(CLASSIFICATION_LABELS),
@@ -566,8 +567,8 @@ class BoostedTreesEstimatorTest(tf.test.TestCase):
         tf.feature_column.numeric_column('f_%d' % i, dtype=tf.dtypes.float32)
         for i in range(NUM_FEATURES)
     }
-    feature_and_weight_dict_weight_1.update(FEATURES_DICT.copy())
-    feature_and_weight_dict_weight_2.update(FEATURES_DICT.copy())
+    feature_and_weight_dict_weight_1 |= FEATURES_DICT.copy()
+    feature_and_weight_dict_weight_2 |= FEATURES_DICT.copy()
     input_fn_1 = numpy_io.numpy_input_fn(
         x=feature_and_weight_dict_weight_1,
         y=np.array(CLASSIFICATION_LABELS),
